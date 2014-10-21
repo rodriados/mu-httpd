@@ -1,35 +1,58 @@
-#include <unistd.h>
 #include <iostream>
 #include <cstdlib>
+#include <thread>
 
 #include "run.h"
 #include "colors.h"
+#include "HTTP.h"
 
 using namespace std;
 
-void run(Socket sock){
+void log();
+void execute(Socket, const string&);
+void process(Socket, AddressIn, thread *);
+
+void run(Socket server){
 
 	Socket client;
 	AddressIn remoteaddr;
+	thread *parallel;
 	unsigned int length = sizeof(remoteaddr);
-	int n;
-	char buffer[1000];
-	string content;
 
 	while(true){
-		content.clear();
-		client = accept(sock, (Address *)&remoteaddr, &length);
-		n = recv(client, buffer, 10, 0);
 
-		while(n > 0){
-			buffer[n] = '\0';
-			content += buffer;
-			n = recv(client, buffer, 10, MSG_DONTWAIT);
-		}
-
-		cout << content.size() << endl;
-		cout << content << endl;
+		client = accept(server, (Address *)&remoteaddr, &length);
+		parallel = new thread(process, client, remoteaddr, parallel);
 
 	}
+
+}
+
+void process(Socket client, AddressIn remote, thread *actual){
+
+	int bytes;
+	char buffer[1000];
+	string received;
+
+	received.clear();
+	bytes = recv(client, buffer, 999, 0);
+
+	while(bytes > 0){
+		buffer[bytes] = '\0';
+		received += buffer;
+		bytes = recv(client, buffer, 999, MSG_DONTWAIT);
+	}
+
+	execute(client, received);
+	close(client);
+}
+
+void execute(Socket client, const string& received){
+
+	HTTP::Request request(received);
+	HTTP::Response response(request);
+
+	logall << (request.method+" "+request.target+" "+request.protocol);
+//	send(client, response.content(), response.length(), 0);
 
 }

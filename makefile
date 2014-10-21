@@ -1,13 +1,27 @@
-CC = g++
-CFLAGS = -Wall -pedantic -Ilib -O2
+LDIR=lib
+SDIR=src
+ODIR=obj
+NAME=httpd
 
-all: httpd
+CFILES:=$(shell find $(SDIR) -name '*.cpp')
+DEPS=$(CFILES:src/%.cpp=obj/%.o)
 
-httpd: run.o httpd.cpp
-	$(CC) $(CFLAGS) obj/run.o httpd.cpp -o httpd
+CC=g++
+LIBS=-pthread
+CFLAGS=-Wall -pedantic -I$(LDIR) $(LIBS) -std=c++11
 
-run.o: src/run.cpp
-	$(CC) $(CFLAGS) -c src/run.cpp -o obj/run.o
+all: $(NAME)
+	@echo
+	@echo "    Para executar, use ./httpd <porta>"
+	@echo
+
+$(NAME): $(DEPS) $(NAME).cpp
+	@$(CC) $^ -o $@ $(CFLAGS)
+
+$(ODIR)/%.o: src/%.cpp $(CFILES)
+	@$(CC) -c $< -o $@ $(CFLAGS)
+
+.phony: clean
 
 clean:
-	rm -rf obj/* httpd
+	@rm -rf $(ODIR)/*.o $(LDIR)/*~ $(SDIR)/*~ *~ $(NAME)
