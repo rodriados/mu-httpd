@@ -39,7 +39,7 @@ class Response{
 		string movedto(const string&) const;
 
 	public:
-		Response(const Request&);
+		Response(Request&);
 
 };
 

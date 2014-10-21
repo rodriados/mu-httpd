@@ -6,6 +6,7 @@
 #include "HTTP.h"
 
 using namespace std;
+using namespace HTTP;
 
 HTTP::Request::Request(const string& request){
 
@@ -22,16 +23,15 @@ HTTP::Request::Request(const string& request){
 
 }
 
-HTTP::Response::Response(const Request& request){
+HTTP::Response::Response(Request& request){
 
 	char tbuffer[80];
 	time_t now = time(NULL);
 	struct tm gmt = *gmtime(&now);
 	strftime(tbuffer, sizeof(tbuffer), "%a, %d %b %Y %H:%M:%S %Z", &gmt);
 
-	string c = "Connection";
-
 	this->protocol = "HTTP/1.1";
+	this->header["Connection"] = request.header["Connection"];
 	this->header["Server"] = "HTTPd by Rodrigo Siqueira, Marcos Iseki e Thiago Ikeda";
 	this->header["Date"] = tbuffer;
 
