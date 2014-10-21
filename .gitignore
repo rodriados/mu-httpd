@@ -1,3 +1,4 @@
 obj/
 httpd
 *.ini
+*.log
