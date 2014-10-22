@@ -1,4 +1,6 @@
+#include <sys/stat.h>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <ctime>
@@ -35,6 +37,121 @@ HTTP::Response::Response(Request& request){
 	this->header["Server"] = "HTTPd by Rodrigo Siqueira, Marcos Iseki e Thiago Ikeda";
 	this->header["Date"] = tbuffer;
 
-	stringstream sres(this->content);
+	this->process(request);
+
+}
+
+void HTTP::Response::process(Request& request){
+
+	if(request.protocol != "HTTP/1.1"){
+		this->nothttp();
+	}
+
+	else if(request.method != "GET" && request.method != "POST"){
+		this->notmethod();
+	}
+
+	else if(this->isobj("www" + request.target)){
+		this->makeobj("www" + request.target);
+	}
+
+/*	else if(this->ismoved(request.target)){
+		this->makemoved();
+	}
+*/
+	else{
+		this->notfound();
+	}
+
+}
+
+void HTTP::Response::nothttp(){
+
+	this->status = 505;
+	this->makefile("error/505.html");
+
+}
+
+void HTTP::Response::notfound(){
+
+	this->status = 404;
+	this->makefile("error/404.html");
+
+}
+
+void HTTP::Response::notmethod(){
+
+	this->status = 501;
+	this->makefile("error/501.html");
+
+}
+
+void HTTP::Response::makeobj(const string& target){
+
+	struct stat st;
+	lstat(target.c_str(), &st);
+
+	if(S_ISREG(st.st_mode)){
+		this->status = 200;
+		this->makefile(target);
+	}
+
+	else if(S_ISDIR(st.st_mode)){
+		this->status = 200;
+		this->makedir(target);
+	}
+
+	else{
+		this->status = 500;
+		this->makefile("error/500.html");
+	}
+
+}
+
+void HTTP::Response::makedir(const string& target){
+
+	this->notfound();
+
+}
+
+void HTTP::Response::makefile(const string& target){
+
+	ifstream file(target);
+
+	this->content.assign(
+		istreambuf_iterator<char>(file),
+		istreambuf_iterator<char>()
+	);
+
+	this->header["Content-Type"] = MIME[target.substr(target.rfind('.') + 1)];
+	this->header["Content-Length"] = to_string(this->content.length());
+
+}
+
+bool HTTP::Response::isobj(const string& target) const {
+
+	struct stat st;
+	lstat(target.c_str(), &st);
+
+	return S_ISDIR(st.st_mode) || S_ISREG(st.st_mode);
+
+}
+
+int HTTP::Response::generate(string& target){
+
+	stringstream tgt;
+
+	tgt << this->protocol << " " << this->status << " " << Code[this->status] << endl;
+
+	for(auto it = this->header.begin(); it != this->header.end(); it++){
+		tgt << it->first << ": " << it->second << endl;
+	}
+
+	tgt << endl;
+	tgt << endl;
+	tgt << this->content;
+	target = tgt.str();
+
+	return target.length();
 
 }

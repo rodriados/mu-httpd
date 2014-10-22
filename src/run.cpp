@@ -52,7 +52,10 @@ void execute(Socket client, const string& received){
 	HTTP::Request request(received);
 	HTTP::Response response(request);
 
+	string content;
+	int length = response.generate(content);
+
 	logall << (request.method+" "+request.target+" "+request.protocol);
-//	send(client, response.content(), response.length(), 0);
+	send(client, content.c_str(), length, 0);
 
 }

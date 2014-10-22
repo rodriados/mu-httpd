@@ -23,23 +23,30 @@ class Request{
 class Response{
 
 	protected:
-		unsigned int status;
-
-	public:
 		string content;
 		string protocol;
+		unsigned int status;
 		map<string, string> header;
 
 	private:
-		bool isdir(const string&) const;
-		bool isfile(const string&) const;
-		bool exists(const string&) const;
-		bool wasmoved(const string&) const;
+		void process(Request&);
 
-		string movedto(const string&) const;
+		void nothttp();
+		void notfound();
+		void notmethod();
+
+		void makeobj(const string&);
+		void makedir(const string&);
+		void makefile(const string&);
+//		void makemoved();
+
+		bool isobj(const string&) const;
+//		bool ismoved(const string&) const;
 
 	public:
 		Response(Request&);
+
+		int generate(string&);
 
 };
 
@@ -48,8 +55,21 @@ static map<int, string> Code = {
 	make_pair(301, "Moved Permanently"),
 	make_pair(400, "Bad Request"),
 	make_pair(404, "Not Found"),
+	make_pair(500, "Internal Server Error"),
 	make_pair(501, "Not Implemented"),
 	make_pair(505, "HTTP Version Not Supported")
+};
+
+static map<string, string> MIME = {
+	make_pair("html", "text/html"),
+	make_pair("txt", "text/plain"),
+	make_pair("jpe", "image/jpeg"),
+	make_pair("jpg", "image/jpeg"),
+	make_pair("jpeg", "image/jpeg"),
+	make_pair("png", "image/png"),
+	make_pair("gif", "image/gif"),
+	make_pair("css", "text/css"),
+	make_pair("js", "text/javascript")
 };
 
 }

@@ -16,12 +16,12 @@ all: $(NAME)
 	@echo
 
 $(NAME): $(DEPS) $(NAME).cpp
-	@$(CC) $^ -o $@ $(CFLAGS)
+	$(CC) $^ -o $@ $(CFLAGS)
 
 $(ODIR)/%.o: src/%.cpp $(CFILES)
-	@$(CC) -c $< -o $@ $(CFLAGS)
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 .phony: clean
 
 clean:
-	@rm -rf $(ODIR)/*.o $(LDIR)/*~ $(SDIR)/*~ *~ $(NAME)
+	rm -rf $(ODIR)/*.o $(LDIR)/*~ $(SDIR)/*~ *~ $(NAME)
