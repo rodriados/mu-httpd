@@ -1,4 +1,5 @@
 #include <sys/stat.h>
+#include <dirent.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -110,7 +111,35 @@ void HTTP::Response::makeobj(const string& target){
 
 void HTTP::Response::makedir(const string& target){
 
-	this->notfound();
+	struct stat st;
+
+	if(stat( (target + "/index.html").c_str() , &st) == 0){
+		this->makefile(target + "/index.html");
+		return;
+	}
+
+	DIR *dir;
+	struct dirent *ent;
+	stringstream index;
+
+	index << "<!DOCTYPE html>" << endl;
+	index << "<html><head><meta charset=\"UTF-8\">" << endl;
+	index << "<title>Index of " << target.substr(target.find('/')) << "</title>" << endl;
+	index << "</head><body>" << endl;
+	index << "<h1>Index of " << target.substr(target.find('/')) << "</h1><ul>" << endl;
+	
+	dir = opendir(target.c_str());
+
+	while((ent = readdir(dir)) != NULL){
+		index << "<li><a href='" << target.substr(target.find('/')) << "/" << ent->d_name << "'>";
+		index << ent->d_name << "</a></li>" << endl;
+	}
+
+	index << "</ul></body></html>";
+
+	this->content = index.str();
+	this->header["Content-Type"] = MIME["html"];
+	this->header["Content-Length"] = to_string(this->content.length());
 
 }
 
