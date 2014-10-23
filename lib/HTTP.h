@@ -1,13 +1,42 @@
 #pragma once
 
+#include <sys/stat.h>
 #include <string>
+#include <vector>
 #include <map>
 
 using namespace std;
 
 namespace HTTP{
+	class Request;
+	class Response;
 
-class Request{
+	static map<int, string> Code = {
+		make_pair(200, "Ok"),
+		make_pair(301, "Moved Permanently"),
+		make_pair(400, "Bad Request"),
+		make_pair(404, "Not Found"),
+		make_pair(500, "Internal Server Error"),
+		make_pair(501, "Not Implemented"),
+		make_pair(505, "HTTP Version Not Supported")
+	};
+
+	static map<string, string> MIME = {
+		make_pair("html", "text/html"),
+		make_pair("txt", "text/plain"),
+		make_pair("jpe", "image/jpeg"),
+		make_pair("jpg", "image/jpeg"),
+		make_pair("jpeg", "image/jpeg"),
+		make_pair("png", "image/png"),
+		make_pair("gif", "image/gif"),
+		make_pair("css", "text/css"),
+		make_pair("js", "text/javascript"),
+		make_pair("pdf", "application/pdf")
+	};
+
+}
+
+class HTTP::Request{
 
 	public:
 		string method;
@@ -20,7 +49,10 @@ class Request{
 
 };
 
-class Response{
+class HTTP::Response{
+
+	private:
+		struct File;
 
 	protected:
 		string content;
@@ -31,17 +63,18 @@ class Response{
 	private:
 		void process(Request&);
 
-		void nothttp();
-		void notfound();
-		void notmethod();
-
 		void makeobj(const string&);
 		void makedir(const string&);
 		void makefile(const string&);
+		void makeindex(const string&, const vector<File>&, const vector<File>&);
 //		void makemoved();
 
 		bool isobj(const string&) const;
 //		bool ismoved(const string&) const;
+		
+		void nothttp();
+		void notfound();
+		void notmethod();
 
 	public:
 		Response(Request&);
@@ -50,26 +83,11 @@ class Response{
 
 };
 
-static map<int, string> Code = {
-	make_pair(200, "Ok"),
-	make_pair(301, "Moved Permanently"),
-	make_pair(400, "Bad Request"),
-	make_pair(404, "Not Found"),
-	make_pair(500, "Internal Server Error"),
-	make_pair(501, "Not Implemented"),
-	make_pair(505, "HTTP Version Not Supported")
-};
+struct HTTP::Response::File{
+	string name;
+	struct stat meta;
 
-static map<string, string> MIME = {
-	make_pair("html", "text/html"),
-	make_pair("txt", "text/plain"),
-	make_pair("jpe", "image/jpeg"),
-	make_pair("jpg", "image/jpeg"),
-	make_pair("jpeg", "image/jpeg"),
-	make_pair("png", "image/png"),
-	make_pair("gif", "image/gif"),
-	make_pair("css", "text/css"),
-	make_pair("js", "text/javascript")
-};
+	File(const string& name, const struct stat& meta)
+		: name(name), meta(meta) {}
 
-}
+};

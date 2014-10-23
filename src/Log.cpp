@@ -11,7 +11,7 @@ Log logerr("log/error.log");
 
 Log::Log(const string& filename){
 
-	this->file = new fstream(filename.c_str(), ifstream::out);
+	this->file = new fstream(filename.c_str(), fstream::app);
 
 }
 
