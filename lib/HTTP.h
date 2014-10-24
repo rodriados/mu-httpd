@@ -5,6 +5,8 @@
 #include <vector>
 #include <map>
 
+#include "run.h"
+
 using namespace std;
 
 namespace HTTP{
@@ -43,9 +45,18 @@ class HTTP::Request{
 		string target;
 		string protocol;
 		map<string, string> header;
+		AddressIn client;
 
 	public:
-		Request(const string&);
+		string get;
+		string post;
+
+	private:
+		void urldecode();
+
+	public:
+		Request(const string&, const AddressIn);
+		~Request();
 
 };
 
@@ -59,25 +70,25 @@ class HTTP::Response{
 		string protocol;
 		unsigned int status;
 		map<string, string> header;
+		Request& request;
 
 	private:
-		void process(Request&);
+		void process();
 
 		void makeobj(const string&);
 		void makedir(const string&);
 		void makefile(const string&);
 		void makeindex(const string&, const vector<File>&, const vector<File>&);
-//		void makemoved();
+		void makemoved();
 
 		bool isobj(const string&) const;
-//		bool ismoved(const string&) const;
+		bool ismoved(const string&);
 		
-		void nothttp();
-		void notfound();
-		void notmethod();
+		void makeerror(int);
 
 	public:
 		Response(Request&);
+		~Response();
 
 		int generate(string&);
 

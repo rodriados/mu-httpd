@@ -11,7 +11,7 @@ Log logerr("log/error.log");
 
 Log::Log(const string& filename){
 
-	this->file = new fstream(filename.c_str(), fstream::app);
+	this->file = new fstream(filename.c_str(), fstream::out|fstream::app);
 
 }
 
@@ -29,10 +29,6 @@ void Log::operator<< (const string& data){
 	time(&rawtime);
 	strftime(buffer, 80, "[%d.%m.%Y %H:%M:%S] ", localtime(&rawtime));
 	
-	this->mtx.lock();
 	(*this->file) << buffer << data << endl;
-	cout << SPACE << buffer << data << endl;
-
-	this->mtx.unlock();
 
 }

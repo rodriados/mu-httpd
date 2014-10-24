@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <sstream>
 #include <thread>
 
 #include "run.h"
@@ -9,8 +10,8 @@
 using namespace std;
 
 void log();
-void execute(Socket, const string&);
-void process(Socket, AddressIn, thread *);
+void execute(Socket, const AddressIn&, const string&);
+void process(Socket, const AddressIn&, thread *);
 
 void run(Socket server){
 
@@ -28,7 +29,7 @@ void run(Socket server){
 
 }
 
-void process(Socket client, AddressIn remote, thread *actual){
+void process(Socket client, const AddressIn& remote, thread *actual){
 
 	int bytes;
 	char buffer[1000];
@@ -43,19 +44,25 @@ void process(Socket client, AddressIn remote, thread *actual){
 		bytes = recv(client, buffer, 999, MSG_DONTWAIT);
 	}
 
-	execute(client, received);
+	execute(client, remote, received);
 	close(client);
 }
 
-void execute(Socket client, const string& received){
+void execute(Socket client, const AddressIn& remote, const string& received){
 
-	HTTP::Request request(received);
+	HTTP::Request request(received, remote);
 	HTTP::Response response(request);
 
 	string content;
 	int length = response.generate(content);
 
-	logall << (request.method+" "+request.target+" "+request.protocol);
+	stringstream logstr;
+
+	logstr << inet_ntoa(remote.sin_addr);
+	logstr << " " << request.method + " " + request.target;
+
+	logall << logstr.str();
+
 	send(client, content.c_str(), length, 0);
 
 }
