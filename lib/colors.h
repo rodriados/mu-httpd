@@ -1,3 +1,14 @@
+/*! \file colors.h
+ * \brief Arquivo de cabeçalho colors.h
+ * \author Marcos Paulo Massao Iseki <mm.iseki@gmail.com>
+ * \author Rodrigo Albuquerque de Oliveira Siqueira <rodriados@gmail.com>
+ * \author Thiago Yasutaka Ikeda <thiagoyasutaka@gmail.com>
+ * \date 23 Oct 2014
+ *
+ * Contém a declaração da biblioteca externa utilizada e das definições
+ * de pré-compilação que alteram o aspecto das mensagens impressas no
+ * terminal de comando.
+ */
 #pragma once
 
 #include <cstdio>

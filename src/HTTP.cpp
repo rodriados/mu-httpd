@@ -1,8 +1,20 @@
+/*! \file HTTP.cpp
+ * \brief Arquivo de implementação HTTP.cpp
+ * \author Marcos Paulo Massao Iseki <mm.iseki@gmail.com>
+ * \author Rodrigo Albuquerque de Oliveira Siqueira <rodriados@gmail.com>
+ * \author Thiago Yasutaka Ikeda <thiagoyasutaka@gmail.com>
+ * \date 23 Oct 2014
+ *
+ * Contém a declaração das bibliotecas externas utilizadas e a implementação dos
+ * métodos da namespace HTTP.
+ * \see HTTP, Request, Response
+ */
 #include <dirent.h>
 #include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <cctype>
 #include <ctime>
@@ -13,6 +25,13 @@
 using namespace std;
 using namespace HTTP;
 
+//! Construtor da classe Request
+/*! \fn Request(const string&, const AddressIn)
+ * Contrói objeto responsável pelo parseamento e processamento da requisição
+ * feita pelo usuário. Permitindo, assim, gerar a resposta de forma satisfatória.
+ * \param request Requisição recebida do cliente.
+ * \param client Endereço do cliente.
+ */
 HTTP::Request::Request(const string& request, const AddressIn client)
 : client(client) {
 
@@ -32,10 +51,22 @@ HTTP::Request::Request(const string& request, const AddressIn client)
 
 }
 
+//! Destrutor da classe Request
+/*! \fn ~Request()
+ * Destrói a instância da classe Request. Método invocado automaticamente
+ * para a liberação de memória e posterior reuso.
+ */
 HTTP::Request::~Request(){
 	;
 }
 
+//! Decodificor de URL
+/*! \fn urldecode()
+ * Normalmente, as URLs costumam chegar um pouco codificadas para devido
+ * a caracteres especiais existentes no endereço que está sendo requisitado.
+ * Esse método visa reverter essa codificação para que o arquivo seja 
+ * acessado normalmente internamente pelo servidor.
+ */
 void HTTP::Request::urldecode(){
 
 	string dec, aux;
@@ -59,6 +90,12 @@ void HTTP::Request::urldecode(){
 
 }
 
+//! Construtor da classe Response
+/*! \fn Response(Request&)
+ * Constrói o objeto responsável pela formatação da resposta do servidor à requisição
+ * feita pelo cliente seguindo o protocolo de internet HTTP.
+ * \param request Objeto de requisição feita pelo cliente.
+ */
 HTTP::Response::Response(Request& request)
 : request(request) {
 
@@ -68,7 +105,7 @@ HTTP::Response::Response(Request& request)
 	strftime(tbuffer, sizeof(tbuffer), "%a, %d %b %Y %H:%M:%S %Z", &gmt);
 
 	this->protocol = "HTTP/1.1";
-	this->header["Connection"] = request.header["Connection"];
+	this->header["Connection"] = "closed";
 	this->header["Server"] = "HTTPd by Rodrigo Siqueira, Marcos Iseki e Thiago Ikeda";
 	this->header["Date"] = tbuffer;
 
@@ -76,10 +113,21 @@ HTTP::Response::Response(Request& request)
 
 }
 
+//! Destrutor da classe Response
+/*! \fn ~Response()
+ * Destrói a instância da classe Response. Método invocado automaticamente
+ * para a liberação de memória e posterior reuso.
+ */
 HTTP::Response::~Response(){
 	;
 }
 
+//! Interpreta requisição e gera a resposta ao cliente
+/*! \fn process()
+ * Interpreta a requisição realizada pelo cliente e tenta gerar uma resposta
+ * aos dados recebidos. Caso a requisição não possa ser corretamente interpretada,
+ * um erro HTTP será exibido.
+ */
 void HTTP::Response::process(){
 
 	if(this->request.protocol != "HTTP/1.1"){
@@ -104,6 +152,12 @@ void HTTP::Response::process(){
 
 }
 
+//! Produz uma resposta ao objeto requisitado
+/*! \fn makeobj(const string&)
+ * Procura o objeto requisitado pelo nome e tenta produzir a resposta
+ * esperada pelo cliente. Os objetos podem ser um arquivo ou pasta.
+ * \param target Nome do objeto requisitado pelo cliente.
+ */
 void HTTP::Response::makeobj(const string& target){
 
 	struct stat st;
@@ -126,6 +180,12 @@ void HTTP::Response::makeobj(const string& target){
 
 }
 
+//! Produz uma resposta a uma requisição de diretório
+/*! \fn makedir(const string&)
+ * Procura um diretório pelo nome, cria uma lista de objetos contidos
+ * em seu interior e produz uma resposta à requisição do cliente.
+ * \param target Nome do diretório requisitado pelo cliente.
+ */
 void HTTP::Response::makedir(const string& target){
 
 	struct stat st;
@@ -136,13 +196,15 @@ void HTTP::Response::makedir(const string& target){
 	}
 
 	struct dirent *ent;
-	vector<File> folders, files;
+	deque<File> folders, files;
 	DIR *dir = opendir(target.c_str());
 
 	while( (ent = readdir(dir)) != NULL){
 		stat((target + "/" + ent->d_name).c_str(), &st);
 
-		if(S_ISDIR(st.st_mode))
+		if(strcmp(ent->d_name, "..") == 0)
+			folders.push_front(File(ent->d_name, st));
+		else if(S_ISDIR(st.st_mode))
 			folders.push_back(File(ent->d_name, st));
 		else
 			files.push_back(File(ent->d_name, st));
@@ -152,6 +214,12 @@ void HTTP::Response::makedir(const string& target){
 
 }
 
+//! Produz uma resposta a uma requisição de arquivo
+/*! \fn makefile(const string&)
+ * Procura um arquivo pelo nome e produz como resposta o conteúdo do
+ * arquivo requisitado pelo cliente.
+ * \param target Nome do arquivo requisitado pelo cliente.
+ */
 void HTTP::Response::makefile(const string& target){
 
 	ifstream file(target);
@@ -166,7 +234,15 @@ void HTTP::Response::makefile(const string& target){
 
 }
 
-void HTTP::Response::makeindex(const string& target, const vector<File>& dirs, const vector<File>& files){
+//! Produz um índice de um diretório como resposta da requisição
+/*! \fn makeindex(const string&, const deque<File>&, const deque<File>&)
+ * Gera um índice de conteúdo de um diretório e permite a navegação recursiva
+ * entre os diretórios contidos em seu interior.
+ * \param target Nome do diretório a ser indexado.
+ * \param dirs Lista de diretórios a serem listados.
+ * \param files Lista de arquivos a serem listados.
+ */
+void HTTP::Response::makeindex(const string& target, const deque<File>& dirs, const deque<File>& files){
 
 	char tmodified[81];
 	stringstream index;
@@ -246,6 +322,13 @@ void HTTP::Response::makeindex(const string& target, const vector<File>& dirs, c
 
 }
 
+//! Implementa um redirecionamento permanente
+/*! \fn makemoved()
+ * Gera, como resposta, um redirecionameto. Isto é, a requisição do usuário já
+ * existiu nesse endereço mas foi transferido permanentemente para outra
+ * localização. O comportamento normal do browser, nessas condições, é fazer
+ * outra requisição do novo endereço.
+ */
 void HTTP::Response::makemoved(){
 
 	this->status = 301;
@@ -254,6 +337,13 @@ void HTTP::Response::makemoved(){
 
 }
 
+//! Testa existencia de alvo de requisição
+/*! \fn isobj(const string&)
+ * Verifica se o alvo da requisição feita do cliente é um objeto, isto é, um
+ * arquivo ou um diretório.
+ * \param target Alvo de requisição a ser testada.
+ * \return A requisição é de um arquivo ou diretório existente?
+ */
 bool HTTP::Response::isobj(const string& target) const {
 
 	struct stat st;
@@ -263,6 +353,14 @@ bool HTTP::Response::isobj(const string& target) const {
 
 }
 
+//! Testa se alvo de requisição já existiu e foi movido
+/*! \fn ismoved(const string&)
+ * Verifica se o alvo da requisição já existiu e/ou foi movido permanentemente
+ * para outra localidade. Só serão reconhecidos movimentos permanentes que
+ * forem explicitamente indicados ao servidor atravez do arquivo \a .moved .
+ * \param target Alvo de requisição a ser testada.
+ * \return A requisição é de um objeto que foi movido permanentemente?
+ */
 bool HTTP::Response::ismoved(const string& target){
 
 	string origin, destiny;
@@ -281,6 +379,13 @@ bool HTTP::Response::ismoved(const string& target){
 
 }
 
+//! Produz uma mensagem de erro à requisição
+/*! \fn makeerror(int)
+ * Retorna, como resposta à requisição do cliente, uma página de erro. Isso
+ * pode acontecer caso a requisição tenha sido mal-formada ou possui como
+ * alvo um objeto problemático ou não existente.
+ * \param code Código de erro a ser retornado como resposta.
+ */
 void HTTP::Response::makeerror(int code){
 
 	stringstream filename, logstr;
@@ -297,6 +402,13 @@ void HTTP::Response::makeerror(int code){
 
 }
 
+//! Gera a resposta à requisição
+/*! \fn generate(string&)
+ * Formata a resposta processada e a retorna em \s target para que possa,
+ * finalmente, ser enviada ao cliente.
+ * \param target Variável responsável por receber a resposta.
+ * \return Tamanho, em caracteres, da resposta gerada.
+ */
 int HTTP::Response::generate(string& target){
 
 	stringstream tgt;
