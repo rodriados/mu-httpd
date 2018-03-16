@@ -12,7 +12,7 @@ CFLAGS=-Wall -pedantic -I$(LDIR) $(LIBS) -std=c++11
 
 all: $(NAME)
 	@echo
-	@echo "    Para executar, use ./httpd <porta>"
+	@echo "    To run, use ./httpd <porta>"
 	@echo
 
 $(NAME): $(DEPS) $(NAME).cpp

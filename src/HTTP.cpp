@@ -33,8 +33,8 @@ using namespace HTTP;
  * \param client Endereço do cliente.
  */
 HTTP::Request::Request(const string& request, const AddressIn client)
-: client(client) {
-
+	: client(client)
+{
 	string line;
 	stringstream sreq(request);
 	
@@ -42,13 +42,12 @@ HTTP::Request::Request(const string& request, const AddressIn client)
 	stringstream(line) >> this->method >> this->target >> this->protocol;
 	this->urldecode();
 
-	while(getline(sreq, line) && line.size() > 1){
+	while(getline(sreq, line) && line.size() > 1) {
 		int spos = line.find(':');
 		this->header[line.substr(0, spos)] = line.substr(spos + 2);
 	}
 
 	getline(sreq, this->post);
-
 }
 
 //! Destrutor da classe Request
@@ -56,9 +55,8 @@ HTTP::Request::Request(const string& request, const AddressIn client)
  * Destrói a instância da classe Request. Método invocado automaticamente
  * para a liberação de memória e posterior reuso.
  */
-HTTP::Request::~Request(){
-	;
-}
+HTTP::Request::~Request()
+{}
 
 //! Decodificor de URL
 /*! \fn urldecode()
@@ -67,27 +65,26 @@ HTTP::Request::~Request(){
  * Esse método visa reverter essa codificação para que o arquivo seja 
  * acessado normalmente internamente pelo servidor.
  */
-void HTTP::Request::urldecode(){
-
+void HTTP::Request::urldecode()
+{
 	string dec, aux;
 	string& enc = this->target;
 	int i, size = this->target.size();
 
 	for(i = 0; i < size; ++i)
-		if(i < size - 2 && enc[i] == '%' && isxdigit(enc[i+1]) && isxdigit(enc[i+2])){
+		if(i < size - 2 && enc[i] == '%' && isxdigit(enc[i+1]) && isxdigit(enc[i+2])) {
 			aux = string() + "0x" + enc[i + 1] + enc[i + 2];
 			dec += (char)strtol(aux.c_str(), NULL, 16);
 			i = i + 2;
 		}
 
-		else{
+		else {
 			dec += enc[i];
 		}
 
 	int spos = dec.find('?');
 	this->get = (spos > -1 ? dec.substr(spos + 1) : "");
 	this->target = dec.substr(0, spos);
-
 }
 
 //! Construtor da classe Response
@@ -97,8 +94,8 @@ void HTTP::Request::urldecode(){
  * \param request Objeto de requisição feita pelo cliente.
  */
 HTTP::Response::Response(Request& request)
-: request(request) {
-
+	: request(request)
+{
 	char tbuffer[80];
 	time_t now = time(NULL);
 	struct tm gmt = *gmtime(&now);
@@ -110,7 +107,6 @@ HTTP::Response::Response(Request& request)
 	this->header["Date"] = tbuffer;
 
 	this->process();
-
 }
 
 //! Destrutor da classe Response
@@ -118,9 +114,8 @@ HTTP::Response::Response(Request& request)
  * Destrói a instância da classe Response. Método invocado automaticamente
  * para a liberação de memória e posterior reuso.
  */
-HTTP::Response::~Response(){
-	;
-}
+HTTP::Response::~Response()
+{}
 
 //! Interpreta requisição e gera a resposta ao cliente
 /*! \fn process()
@@ -128,28 +123,27 @@ HTTP::Response::~Response(){
  * aos dados recebidos. Caso a requisição não possa ser corretamente interpretada,
  * um erro HTTP será exibido.
  */
-void HTTP::Response::process(){
-
-	if(this->request.protocol != "HTTP/1.1"){
+void HTTP::Response::process()
+{
+	if(this->request.protocol != "HTTP/1.1") {
 		this->makeerror(505);
 	}
 
-	else if(this->request.method != "GET" && this->request.method != "POST"){
+	else if(this->request.method != "GET" && this->request.method != "POST") {
 		this->makeerror(501);
 	}
 
-	else if(this->isobj("www" + this->request.target)){
+	else if(this->isobj("www" + this->request.target)) {
 		this->makeobj("www" + this->request.target);
 	}
 
-	else if(this->ismoved(this->request.target)){
+	else if(this->ismoved(this->request.target)) {
 		this->makemoved();
 	}
 
-	else{
+	else {
 		this->makeerror(404);
 	}
-
 }
 
 //! Produz uma resposta ao objeto requisitado
@@ -158,26 +152,25 @@ void HTTP::Response::process(){
  * esperada pelo cliente. Os objetos podem ser um arquivo ou pasta.
  * \param target Nome do objeto requisitado pelo cliente.
  */
-void HTTP::Response::makeobj(const string& target){
-
+void HTTP::Response::makeobj(const string& target)
+{
 	struct stat st;
 	lstat(target.c_str(), &st);
 
-	if(S_ISREG(st.st_mode)){
+	if(S_ISREG(st.st_mode)) {
 		this->status = 200;
 		this->makefile(target);
 	}
 
-	else if(S_ISDIR(st.st_mode)){
+	else if(S_ISDIR(st.st_mode)) {
 		this->status = 200;
 		this->makedir(target);
 	}
 
-	else{
+	else {
 		this->status = 500;
 		this->makefile("default/500.html");
 	}
-
 }
 
 //! Produz uma resposta a uma requisição de diretório
@@ -186,11 +179,11 @@ void HTTP::Response::makeobj(const string& target){
  * em seu interior e produz uma resposta à requisição do cliente.
  * \param target Nome do diretório requisitado pelo cliente.
  */
-void HTTP::Response::makedir(const string& target){
-
+void HTTP::Response::makedir(const string& target)
+{
 	struct stat st;
 
-	if(stat( (target + "/index.html").c_str() , &st) == 0){
+	if(stat((target + "/index.html").c_str(), &st) == 0) {
 		this->makefile(target + "/index.html");
 		return;
 	}
@@ -199,7 +192,7 @@ void HTTP::Response::makedir(const string& target){
 	deque<File> folders, files;
 	DIR *dir = opendir(target.c_str());
 
-	while( (ent = readdir(dir)) != NULL){
+	while((ent = readdir(dir)) != NULL) {
 		stat((target + "/" + ent->d_name).c_str(), &st);
 
 		if(strcmp(ent->d_name, "..") == 0)
@@ -211,7 +204,6 @@ void HTTP::Response::makedir(const string& target){
 	}
 
 	this->makeindex(target, folders, files);
-
 }
 
 //! Produz uma resposta a uma requisição de arquivo
@@ -220,8 +212,8 @@ void HTTP::Response::makedir(const string& target){
  * arquivo requisitado pelo cliente.
  * \param target Nome do arquivo requisitado pelo cliente.
  */
-void HTTP::Response::makefile(const string& target){
-
+void HTTP::Response::makefile(const string& target)
+{
 	ifstream file(target);
 
 	this->content.assign(
@@ -231,7 +223,6 @@ void HTTP::Response::makefile(const string& target){
 
 	this->header["Content-Type"] = MIME[target.substr(target.rfind('.') + 1)];
 	this->header["Content-Length"] = to_string(this->content.length());
-
 }
 
 //! Produz um índice de um diretório como resposta da requisição
@@ -242,8 +233,8 @@ void HTTP::Response::makefile(const string& target){
  * \param dirs Lista de diretórios a serem listados.
  * \param files Lista de arquivos a serem listados.
  */
-void HTTP::Response::makeindex(const string& target, const deque<File>& dirs, const deque<File>& files){
-
+void HTTP::Response::makeindex(const string& target, const deque<File>& dirs, const deque<File>& files)
+{
 	char tmodified[81];
 	stringstream index;
 	time_t now = time(0), timediff;
@@ -267,7 +258,7 @@ void HTTP::Response::makeindex(const string& target, const deque<File>& dirs, co
 	index << "lgd\"><div class=\"lg name\"><span>Name</span></div><div class=\"lg modified\"><span>Last Modified</span></di";
 	index << "v><div class=\"lg size\"><span>Size</span></div></div><ul>";
 
-	for(const File& elem : dirs){
+	for(const File& elem : dirs) {
 		if(elem.name == "." || (elem.name == ".." && target == "www/"))
 			continue;
 
@@ -287,12 +278,11 @@ void HTTP::Response::makeindex(const string& target, const deque<File>& dirs, co
 		index << "<div class=\"size\"><span>-</span></div></li></a>";
 	}
 
-	if(files.size() > 0){
-
+	if(files.size() > 0) {
 		index << "</ul><div class=\"lgd\" style=\"margin-top:70px\"><p>FILES</p></div><ul>";
 		string mags[] = {"", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
 
-		for(const File& elem : files){
+		for(const File& elem : files) {
 			timediff = now - elem.meta.st_mtime;
 			timeinfo = *localtime(&elem.meta.st_mtime);
 			size = elem.meta.st_size;
@@ -319,7 +309,6 @@ void HTTP::Response::makeindex(const string& target, const deque<File>& dirs, co
 	this->content = index.str();
 	this->header["Content-Type"] = MIME["html"];
 	this->header["Content-Length"] = to_string(this->content.length());
-
 }
 
 //! Implementa um redirecionamento permanente
@@ -329,12 +318,11 @@ void HTTP::Response::makeindex(const string& target, const deque<File>& dirs, co
  * localização. O comportamento normal do browser, nessas condições, é fazer
  * outra requisição do novo endereço.
  */
-void HTTP::Response::makemoved(){
-
+void HTTP::Response::makemoved()
+{
 	this->status = 301;
 	this->header["Location"] = this->content;
 	this->content = "";
-
 }
 
 //! Testa existencia de alvo de requisição
@@ -344,13 +332,12 @@ void HTTP::Response::makemoved(){
  * \param target Alvo de requisição a ser testada.
  * \return A requisição é de um arquivo ou diretório existente?
  */
-bool HTTP::Response::isobj(const string& target) const {
-
+bool HTTP::Response::isobj(const string& target) const
+{
 	struct stat st;
 	lstat(target.c_str(), &st);
 
 	return S_ISDIR(st.st_mode) || S_ISREG(st.st_mode);
-
 }
 
 //! Testa se alvo de requisição já existiu e foi movido
@@ -361,22 +348,21 @@ bool HTTP::Response::isobj(const string& target) const {
  * \param target Alvo de requisição a ser testada.
  * \return A requisição é de um objeto que foi movido permanentemente?
  */
-bool HTTP::Response::ismoved(const string& target){
-
+bool HTTP::Response::ismoved(const string& target)
+{
 	string origin, destiny;
 	ifstream movfile("default/.moved");
 
-	while(movfile.good()){
+	while(movfile.good()) {
 		movfile >> origin >> destiny;
 
-		if(origin == target){
+		if(origin == target) {
 			this->content = destiny;
 			return true;
 		}
 	}
 
 	return false;
-
 }
 
 //! Produz uma mensagem de erro à requisição
@@ -386,8 +372,8 @@ bool HTTP::Response::ismoved(const string& target){
  * alvo um objeto problemático ou não existente.
  * \param code Código de erro a ser retornado como resposta.
  */
-void HTTP::Response::makeerror(int code){
-
+void HTTP::Response::makeerror(int code)
+{
 	stringstream filename, logstr;
 	filename << "default/" << code << ".html";
 
@@ -399,7 +385,6 @@ void HTTP::Response::makeerror(int code){
 	logstr << this->request.target << " " << code;
 
 	logerr << logstr.str();
-
 }
 
 //! Gera a resposta à requisição
@@ -409,13 +394,13 @@ void HTTP::Response::makeerror(int code){
  * \param target Variável responsável por receber a resposta.
  * \return Tamanho, em caracteres, da resposta gerada.
  */
-int HTTP::Response::generate(string& target){
-
+int HTTP::Response::generate(string& target)
+{
 	stringstream tgt;
 
 	tgt << this->protocol << " " << this->status << " " << Code[this->status] << endl;
 
-	for(auto it = this->header.begin(); it != this->header.end(); it++){
+	for(auto it = this->header.begin(); it != this->header.end(); it++) {
 		tgt << it->first << ": " << it->second << endl;
 	}
 
@@ -424,5 +409,4 @@ int HTTP::Response::generate(string& target){
 	target = tgt.str();
 
 	return target.length();
-
 }

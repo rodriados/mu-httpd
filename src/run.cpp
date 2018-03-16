@@ -29,20 +29,17 @@ void process(Socket, const AddressIn&, thread *);
  * feitas paralelamente atravez de um thread.
  * \param server Socket de rede do servidor.
  */
-void run(Socket server){
-
+void run(Socket server)
+{
 	Socket client;
 	AddressIn remoteaddr;
 	thread *parallel;
 	unsigned int length = sizeof(remoteaddr);
 
-	while(true){
-
+	while(true) {
 		client = accept(server, (Address *)&remoteaddr, &length);
 		parallel = new thread(process, client, remoteaddr, parallel);
-
 	}
-
 }
 
 //! Recebe e processa requisição de cliente
@@ -53,8 +50,8 @@ void run(Socket server){
  * \param remote Endereço de rede do cliente.
  * \param thread Referência de thread para mantê-lo ativo.
  */
-void process(Socket client, const AddressIn& remote, thread *actual){
-
+void process(Socket client, const AddressIn& remote, thread *actual)
+{
 	int bytes;
 	char buffer[1000];
 	string received;
@@ -62,7 +59,7 @@ void process(Socket client, const AddressIn& remote, thread *actual){
 	received.clear();
 	bytes = recv(client, buffer, 999, 0);
 
-	while(bytes > 0){
+	while(bytes > 0) {
 		buffer[bytes] = '\0';
 		received += buffer;
 		bytes = recv(client, buffer, 999, MSG_DONTWAIT);
@@ -80,8 +77,8 @@ void process(Socket client, const AddressIn& remote, thread *actual){
  * \param remote Endereço de rede do cliente.
  * \param received Dados recebidos como requisição.
  */
-void execute(Socket client, const AddressIn& remote, const string& received){
-
+void execute(Socket client, const AddressIn& remote, const string& received)
+{
 	HTTP::Request request(received, remote);
 	HTTP::Response response(request);
 
@@ -102,5 +99,4 @@ void execute(Socket client, const AddressIn& remote, const string& received){
 
 	if(request.post.size())
 		cout << SPACE << request.target << " POST " << request.post << endl;
-
 }

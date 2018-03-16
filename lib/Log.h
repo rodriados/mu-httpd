@@ -24,8 +24,8 @@ using namespace std;
  * log do servidor, sendo atribuída a ela toda a responsabilidade da
  * interação com os arquivos de log.
  */
-class Log{
-
+class Log
+{
 	/*
 	 * Declaração de propriedades da classe para permitir o armazenamento
 	 * e encapsulamento de valores e objetos sob o escopo da classe.
@@ -42,7 +42,6 @@ class Log{
 		~Log();
 
 		void operator<< (const string&);
-
 };
 
 extern Log logall;

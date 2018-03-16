@@ -26,10 +26,9 @@ Log logerr("log/error.log");
  * de log do servidor.
  * \param filename Nome do arquivo a ser utilizado como log.
  */
-Log::Log(const string& filename){
-
+Log::Log(const string& filename)
+{
 	this->file = new fstream(filename.c_str(), fstream::out|fstream::app);
-
 }
 
 //! Destrutor da classe Log
@@ -37,10 +36,9 @@ Log::Log(const string& filename){
  * Destrói a instância da classe Log. Método invocado automaticamente
  * para a liberação de memória e posterior reuso.
  */
-Log::~Log(){
-
+Log::~Log()
+{
 	delete this->file;
-
 }
 
 //! Escreve uma linha de log ao arquivo
@@ -49,8 +47,8 @@ Log::~Log(){
  * assim, o controle de todas as transições feita pelo servidor.
  * \param data Dados a serem adicionados na linha de log.
  */
-void Log::operator<< (const string& data){
-
+void Log::operator<<(const string& data)
+{
 	char buffer[80];
 	time_t rawtime;
 
@@ -58,5 +56,4 @@ void Log::operator<< (const string& data){
 	strftime(buffer, 80, "[%d.%m.%Y %H:%M:%S] ", localtime(&rawtime));
 	
 	(*this->file) << buffer << data << endl;
-
 }

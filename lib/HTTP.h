@@ -30,7 +30,8 @@ using namespace std;
  * formato MIME da mensagem a partir de sua extensão.
  * \see Request, Response
  */
-namespace HTTP{
+namespace HTTP
+{
 	class Request;
 	class Response;
 
@@ -66,7 +67,6 @@ namespace HTTP{
 		make_pair("js", "text/javascript"),
 		make_pair("pdf", "application/pdf")
 	};
-
 }
 
 //! Classe leitora de requisição
@@ -76,8 +76,8 @@ namespace HTTP{
  * o método, o alvo e o protocolo da requisição caso seja adequadamente
  * apresentada no formato HTTP.
  */
-class HTTP::Request{
-
+class HTTP::Request
+{
 	/*
 	 * Declaração de propriedades da classe para permitir o armazenamento
 	 * e encapsulamento de valores e objetos sob o escopo da classe.
@@ -103,7 +103,6 @@ class HTTP::Request{
 	public:
 		Request(const string&, const AddressIn);
 		~Request();
-
 };
 
 //! Classe replicante de requisição
@@ -111,8 +110,8 @@ class HTTP::Request{
  * A classe Response é responsável por formatar a resposta do servidor ao
  * cliente no formato adequado de resposta HTTP.
  */
-class HTTP::Response{
-
+class HTTP::Response
+{
 	/*
 	 * Declaração de objetos aninhados e encapsulados sob o escopo do 
 	 * objeto principal. Os controles de visibilidade são ditados pelo
@@ -155,7 +154,6 @@ class HTTP::Response{
 		~Response();
 
 		int generate(string&);
-
 };
 
 //! Estrutura de informações de arquivo
@@ -163,11 +161,12 @@ class HTTP::Response{
  * Estrutura responsável pelo armazenamento das informações de um arquivo.
  * As informações contidas são obtidas através da função de sistema \a stat .
  */
-struct HTTP::Response::File{
+struct HTTP::Response::File
+{
 	string name;
 	struct stat meta;
 
 	File(const string& name, const struct stat& meta)
-		: name(name), meta(meta) {}
-
+		: name(name), meta(meta)
+	{}
 };
