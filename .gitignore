@@ -1,6 +1,7 @@
 obj/
 log/
-httpd
+mu-http
 *.ini
 *.swp
 *~
+*.sublime-workspace

@@ -1,7 +1,7 @@
 LDIR=lib
 SDIR=src
 ODIR=obj
-NAME=httpd
+NAME=mu-http
 
 CFILES:=$(shell find $(SDIR) -name '*.cpp')
 DEPS=$(CFILES:src/%.cpp=obj/%.o)
@@ -12,7 +12,7 @@ CFLAGS=-Wall -pedantic -I$(LDIR) $(LIBS) -std=c++11
 
 all: $(NAME)
 	@echo
-	@echo "    To run, use ./httpd <porta>"
+	@echo "    To run, use ./mu-http <port>"
 	@echo
 
 $(NAME): $(DEPS) $(NAME).cpp

@@ -1,4 +1,4 @@
-/*! \file httpd.cpp
+/*! \file mu-http.cpp
  * \brief Software's main file.
  * 
  * This file contains the software's entry point, responsible for its initialization,
@@ -33,7 +33,7 @@
  * To compile, using a command line terminal, run the makefile in a Linux computer
  * with a GNU C++11 compiler support.
  *
- * To run, use ./httpd [port]
+ * To run, use ./mu-http [port]
  * \see main, run, HTTP
  */
 #include <iostream>
@@ -90,7 +90,7 @@ void hello()
 {
 	style(BRIGHT);
 	cout << endl;
-	cout << SPACE << "HTTPd Hipertext Transfer Protocol Server." << endl;
+	cout << SPACE << "μHTTP Hipertext Transfer Protocol Server." << endl;
 	cout << endl;
 
 	style(RESETALL);
