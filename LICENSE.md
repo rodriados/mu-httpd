@@ -1,6 +1,6 @@
 The MIT License
 
-Copyright (c) 2014
+Copyright (c) 2014-2018
 
 Marcos Paulo Massao Iseki
 Rodrigo Albuquerque de Oliveira Siqueira
