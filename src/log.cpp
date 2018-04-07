@@ -13,7 +13,7 @@
 #include <ctime>
 
 #include "colors.h"
-#include "Log.h"
+#include "log.hpp"
 
 using namespace std;
 

@@ -15,7 +15,8 @@
 #include <thread>
 
 #include "colors.h"
-#include "HTTP.h"
+#include "http.hpp"
+#include "log.hpp"
 #include "run.h"
 
 using namespace std;

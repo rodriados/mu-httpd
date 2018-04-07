@@ -1,4 +1,4 @@
-LDIR=lib
+LDIR=src
 SDIR=src
 ODIR=obj
 NAME=mu-http
@@ -11,9 +11,6 @@ LIBS=-pthread
 CFLAGS=-Wall -pedantic -I$(LDIR) $(LIBS) -std=c++11
 
 all: $(NAME)
-	@echo
-	@echo "    To run, use ./mu-http <port>"
-	@echo
 
 $(NAME): $(DEPS) $(NAME).cpp
 	$(CC) $^ -o $@ $(CFLAGS)
@@ -24,4 +21,4 @@ $(ODIR)/%.o: src/%.cpp $(CFILES)
 .phony: clean
 
 clean:
-	rm -rf $(ODIR)/*.o $(LDIR)/*~ $(SDIR)/*~ *~ $(NAME)
+	rm -rf $(ODIR)/*.o $(ODIR)/*~ $(SDIR)/*~ *~ $(NAME)

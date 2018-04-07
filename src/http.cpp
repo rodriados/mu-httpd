@@ -19,8 +19,8 @@
 #include <cctype>
 #include <ctime>
 
-#include "Log.h"
-#include "HTTP.h"
+#include "log.hpp"
+#include "http.hpp"
 
 using namespace std;
 using namespace HTTP;

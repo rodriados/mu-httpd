@@ -5,3 +5,4 @@ mu-http
 *.swp
 *~
 *.sublime-workspace
+.idea
