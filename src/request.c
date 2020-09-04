@@ -14,6 +14,8 @@
 
 #include "request.h"
 
+#define PAGE_SIZE 4096
+
 /*!
  * \struct request_t
  * \brief Groups together all information about an incoming request.
@@ -80,8 +82,9 @@ void request_listen(socket_id server, int max_threads)
  */
 void request_process(void *request)
 {
-    char *request_buffer = request_read((request_t *) request);
-    http_request_t http_request = http_request_parse(request_buffer);
+    int request_size;
+    char *request_buffer = request_read((request_t *) request, &request_size);
+    http_request_t http_request = http_request_parse(request_buffer, request_size);
 
     free(request_buffer);
 }
@@ -95,19 +98,17 @@ void request_process(void *request)
  */
 char *request_read(request_t *request, int *size)
 {
-    char *buffer = malloc(sizeof(char) * 4096);
-
     int offset = 0;
-    int bytes_read = recv(request->client, buffer, 4095, 0);
 
-    while (bytes_read > 0) {
+    char *buffer = malloc(sizeof(char) * PAGE_SIZE);
+    int bytes_read = recv(request->client, buffer, PAGE_SIZE, 0);
+
+    while (bytes_read == PAGE_SIZE) {
         offset += bytes_read;
-        buffer = realloc(buffer, sizeof(char) * (offset + 4096));
-        bytes_read = recv(request->client, &buffer[offset], 4095, MSG_DONTWAIT);
+        buffer = realloc(buffer, sizeof(char) * (offset + PAGE_SIZE));
+        bytes_read = recv(request->client, &buffer[offset], PAGE_SIZE, MSG_DONTWAIT);
     }
 
     *size = offset + bytes_read;
-    buffer[*size] = (char) 0;
-
     return buffer;
 }
