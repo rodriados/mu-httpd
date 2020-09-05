@@ -15,11 +15,23 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <signal.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 #include <stdio.h>
 
+#include "config.h"
 #include "colors.h"
 #include "request.h"
+
+/*!
+ * \var server
+ * \brief This is the descriptor of the socket used by the server.
+ */
+socket_id server;
+
+void abort_listening(int);
 
 /*!
  * \fn int main(int, char **)
@@ -29,35 +41,47 @@
  */
 int main(int argc, char **argv)
 {
-    socket_id server;
-    sockaddr_in localaddr;
+    struct sockaddr_in localaddr;
 
-    memset(&localaddr, 0, sizeof(sockaddr_in));
+    memset(&localaddr, 0, sizeof(struct sockaddr_in));
 
     localaddr.sin_family = AF_INET;
     localaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    localaddr.sin_port = htons(argc > 1 ? atoi(argv[1]) : 8080);
+    localaddr.sin_port = htons(argc > 1 ? atoi(argv[1]) : DEFAULT_PORT);
 
     server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-    if (server == INVALID_SOCKET) {
-        printf("Could not create socket!\n");
-        return 1;
-    }
-
-    bind(server, (sockaddr *)&localaddr, sizeof(sockaddr_in));
-    listen(server, 100);
+    bind(server, (struct sockaddr *)&localaddr, sizeof(struct sockaddr_in));
+    listen(server, MAX_CONNECTIONS);
 
     char *address = inet_ntoa(localaddr.sin_addr);
     int port = ntohs(localaddr.sin_port);
 
-    printf(BRIGHT "μHTTP Hipertext Transfer Protocol Server\n" RESETALL);
+    printf(BRIGHT "μHTTP Hipertext Transfer Protocol Server\n\n" RESETALL);
+
+    if (errno) {
+        printf(BACKRED " ERROR " RESETALL " Could not create socket! Bailing out.\n");
+        return 1;
+    }
+
+    signal(SIGINT, abort_listening);
+
     printf(BACKGREEN " LISTENING " RESETALL " @ %s:%d\n\n", address, port);
 
-    request_listen(server, 50);
+    request_listen(server, MAX_THREADS);
     close(server);
 
     printf(RESETALL);
 
     return 0;
+}
+
+/*!
+ * \fn void abort_listening(int)
+ * \brief Handles termination signal and closes the server.
+ */
+void abort_listening(int _)
+{
+    close(server);
+    exit(0);
 }

@@ -3,8 +3,8 @@
  * Declares functions and defines structures relevant to HTTP requests.
  * \author Rodrigo Siqueira <rodriados@gmail.com>
  */
-#ifndef MU_HTTP_HTTP_H
-#define MU_HTTP_HTTP_H
+#ifndef MU_HTTPD_HTTP_H
+#define MU_HTTPD_HTTP_H
 
 /*!
  * \enum http_method_t
@@ -29,8 +29,10 @@ enum http_method_t {
 enum http_error_t {
     HTTP_ERROR_OK = 0
   , HTTP_ERROR_METHOD_INVALID
-  , HTTP_ERROR_PATH_INVALID
-  , HTTP_ERROR_URI_QUERY_INVALID
+  , HTTP_ERROR_URI_EMPTY
+  , HTTP_ERROR_URI_TOO_LONG
+  , HTTP_ERROR_REQUEST_TOO_LONG
+  , HTTP_ERROR_PROTOCOL_INVALID
 };
 
 struct http_param_bag_t {

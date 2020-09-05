@@ -4,8 +4,8 @@
  * on terminal. These macros must be used concatenated to the string to be printed.
  * \author Rodrigo Siqueira <rodriados@gmail.com>
  */
-#ifndef MU_HTTP_COLORS_H
-#define MU_HTTP_COLORS_H
+#ifndef MU_HTTPD_COLORS_H
+#define MU_HTTPD_COLORS_H
 
 #define SPACE "    "
 

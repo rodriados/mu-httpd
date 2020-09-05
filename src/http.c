@@ -5,9 +5,11 @@
  */
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <ctype.h>
 #include <stdio.h>
 
+#include "config.h"
 #include "http.h"
 
 size_t http_request_parse_method(enum http_error_t *, struct http_request_t *, char *);
@@ -29,13 +31,16 @@ struct http_request_t http_request_parse(enum http_error_t *error, char *raw, si
     size_t consumed = 0;
     struct http_request_t http_request = { .raw = raw };
 
-    *error = HTTP_ERROR_OK;
+    if (*error != HTTP_ERROR_OK)
+        return http_request;
 
     consumed += http_request_parse_method(error, &http_request, raw);
     consumed += http_request_parse_uri(error, &http_request, raw + consumed);
     consumed += http_request_parse_protocol(error, &http_request, raw + consumed);
-    consumed += http_request_parse_headers(error, &http_request, raw + consumed);
-    consumed += http_request_parse_contents(error, &http_request, raw + consumed, size - consumed);
+    //consumed += http_request_parse_headers(error, &http_request, raw + consumed);
+
+    http_request.contents = raw + consumed;
+    http_request.length = size - consumed;
 
     return http_request;
 }
@@ -43,7 +48,7 @@ struct http_request_t http_request_parse(enum http_error_t *error, char *raw, si
 enum http_method_t http_request_parse_map_method(const char *);
 
 size_t http_request_parse_uri_path(enum http_error_t *, char **, char *);
-size_t http_request_parse_uri_query(enum http_error_t *, struct http_param_bag_t **, char *);
+size_t http_request_parse_uri_query(enum http_error_t *, char **, char *);
 
 /*!
  * \fn size_t http_request_parse_method(enum http_error_t *, struct http_request_t *, const char *)
@@ -60,13 +65,15 @@ size_t http_request_parse_method(enum http_error_t *error, struct http_request_t
     if (*error != HTTP_ERROR_OK)
         return 0;
 
-    size_t consumed = sscanf(raw, "%16s ", buffer);
+    size_t total_size;
+    sscanf(raw, "%16s%zn ", buffer, &total_size);
+
     request->method = http_request_parse_map_method(buffer);
 
     if (request->method == HTTP_METHOD_UNKNOWN)
         *error = HTTP_ERROR_METHOD_INVALID;
 
-    return consumed;
+    return total_size + 1;
 }
 
 /*!
@@ -102,17 +109,23 @@ size_t http_request_parse_uri(enum http_error_t *error, struct http_request_t *r
     if (*error != HTTP_ERROR_OK)
         return 0;
 
-    size_t consumed = 0;
+    size_t total_size, consumed = 0;
     struct http_uri_t *uri = &request->uri;
 
-    char *end = strtok(raw, "\n\r ");
-    size_t total_size = end - raw;
+    sscanf(raw, "%*[^ ]%zn ", &total_size);
 
-    uri->path = NULL;
-    uri->query = NULL;
+    if (total_size == 0)
+        *error = HTTP_ERROR_URI_EMPTY;
+
+    else if (total_size > MAX_URL_SIZE)
+        *error = HTTP_ERROR_URI_TOO_LONG;
 
     consumed += http_request_parse_uri_path(error, &uri->path, raw);
-    consumed += http_request_parse_uri_query(error, &uri->query, raw + consumed);
+
+    if (consumed < total_size)
+        http_request_parse_uri_query(error, &uri->query, raw + consumed);
+    else
+        uri->query = raw + consumed - 1;
 
     return total_size + 1;
 }
@@ -128,8 +141,8 @@ void http_request_parse_uri_decode_special(char *raw, size_t size)
     char decoded;
     size_t decoded_size = 0;
 
-    for (size_t i = 0; i < size; ++i) {
-        bool special_char = (i < size - 2) && (raw[i] == '%');
+    for (int i = 0; i < (int) size; ++i) {
+        bool special_char = (i < ((int) size - 2)) && (raw[i] == '%');
 
         if (special_char && isxdigit(raw[i + 1]) && isxdigit(raw[i + 2])) {
             char hex[] = {raw[i + 1], raw[i + 2], 0};
@@ -159,15 +172,10 @@ size_t http_request_parse_uri_path(enum http_error_t *error, char **path, char *
     if (*error != HTTP_ERROR_OK)
         return 0;
 
-    char *end = strtok(raw, "? ");
-    size_t total_size = end != NULL ? end - raw : 0;
+    size_t total_size;
+    sscanf(raw, "%*[^? ]%zn", &total_size);
 
-    if (total_size == 0) {
-        *error = HTTP_ERROR_PATH_INVALID;
-    } else {
-        http_request_parse_uri_decode_special(*path = raw, total_size);
-    }
-
+    http_request_parse_uri_decode_special(*path = raw, total_size);
     return total_size + 1;
 }
 
@@ -184,14 +192,43 @@ size_t http_request_parse_uri_query(enum http_error_t *error, char **query, char
     if (*error != HTTP_ERROR_OK)
         return 0;
 
-    char *end = strtok(raw, " ");
-    size_t total_size = end != NULL ? end - raw : 0;
+    size_t total_size;
+    sscanf(raw, "%*[^ ]%zn ", &total_size);
 
-    if (end == NULL) {
-        *error = HTTP_ERROR_URI_QUERY_INVALID;
-    } else if (total_size > 1) {
-        http_request_parse_uri_decode_special(*query = raw, total_size);
-    }
-
+    http_request_parse_uri_decode_special(*query = raw, total_size);
     return total_size + 1;
+}
+
+/*!
+ * \fn size_t http_request_parse_protocol(enum http_error_t *, struct http_request_t *, char *)
+ * \brief Parses the incoming HTTP protocol.
+ * \param error The error status return for the current parsing.
+ * \param request The HTTP request structure to output the parsing to.
+ * \param raw The raw request contents.
+ * \return The amount of bytes consumed.
+ */
+size_t http_request_parse_protocol(enum http_error_t *error, struct http_request_t *request, char *raw)
+{
+    if (*error != HTTP_ERROR_OK)
+        return 0;
+
+    size_t total_size;
+    total_size = sscanf(raw, "%16s\r\n", request->protocol);
+
+    if (strcmp(request->protocol, "HTTP/1.1") != 0)
+        *error = HTTP_ERROR_PROTOCOL_INVALID;
+
+    return total_size;
+}
+
+/*!
+ * \fn void http_request_free(struct http_request_t *)
+ * \brief Frees up all resources consumed by the current request.
+ * \param request The request to have its resources freed up.
+ */
+void http_request_free(struct http_request_t *request)
+{
+    if (request->raw) {
+        free(request->raw);
+    }
 }

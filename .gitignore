@@ -1,6 +1,6 @@
 obj/
 log/
-mu-http
+mu-httpd
 *.ini
 *.swp
 *~

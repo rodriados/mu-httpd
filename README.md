@@ -1,4 +1,4 @@
-# μHTTP Webserver
+# μHTTPd Webserver
 ![license MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)
 ![version 1.0](https://img.shields.io/badge/version-1.0-green.svg)
 ![state abandoned](https://img.shields.io/badge/state-abandoned-red.svg)
@@ -7,7 +7,7 @@ A very very simple and very very small HTTP server.
 
 ## Installation
 μHTTP requires very little work to start working, and cannot be configured in any manner! Just download the source
-code, compile using `make` and run using `./mu-http [port]`.
+code, compile using `make` and run using `./mu-httpd [port]`.
 
 We dare you to find any other webserver as easy to use and featureless as ours.
 

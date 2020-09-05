@@ -8,34 +8,16 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include <signal.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "request.h"
+#include "http.h"
 
-#define PAGE_SIZE 4096
-
-void request_process(void *);
-char *request_read(struct request_t *);
-void request_free(char *);
-
-/*!
- * \var keep_running
- * \brief Informs whether the server should keep running and listening to new requests.
- */
-static volatile int keep_running = 1;
-
-/*!
- * \fn void server_interrupt(int)
- * \brief Interrupts the server execution.
- * \param _ Unused parameter.
- */
-void server_interrupt(int _)
-{
-    keep_running = 0;
-}
+void *request_process(void *);
+enum http_error_t request_read(struct request_t *, char **, size_t *);
 
 /*!
  * \fn void request_listen(socket_id, size_t)
@@ -47,16 +29,15 @@ void request_listen(socket_id server, size_t max_threads)
 {
     size_t current_id = 0;
     struct request_t *request_list = calloc(max_threads, sizeof(struct request_t));
+    socklen_t length = sizeof(struct sockaddr_in);
 
-    signal(SIGINT, server_interrupt);
-
-    while(keep_running) {
+    while(1) {
         struct request_t *request = &request_list[current_id];
 
         if (request->thread)
             pthread_join(request->thread, NULL);
 
-        request->client = accept(server, (sockaddr *) &request->remoteaddr, sizeof(sockaddr_in));
+        request->client = accept(server, (struct sockaddr *) &request->remoteaddr, &length);
         pthread_create(&request->thread, NULL, request_process, (void *) request);
 
         current_id = (current_id + 1) % max_threads;
@@ -71,51 +52,46 @@ void request_listen(socket_id server, size_t max_threads)
  * \brief Processes a request and returns a response to client.
  * \param request The request to be processed.
  */
-void request_process(void *request)
+void *request_process(void *request)
 {
     size_t length;
-    enum http_error_t error;
+    char *request_buffer;
+    enum http_error_t error = HTTP_ERROR_OK;
 
-    char *request_buffer = request_read((struct request_t *) request, &length);
+    error = request_read((struct request_t *) request, &request_buffer, &length);
     struct http_request_t http_request = http_request_parse(&error, request_buffer, length);
 
     http_request_free(&http_request);
+    return NULL;
 }
 
 /*!
- * \fn char *request_read(struct request_t *, size_t *)
+ * \fn enum http_error_t request_read(struct request_t *, char **, size_t *)
  * \brief Reads the request into memory.
  * \param request The request to be read into memory.
+ * \param buffer The request's raw buffer.
  * \param length The total request length.
- * \return The request's buffer.
+ * \return The error status for reading the request.
  */
-char *request_read(struct request_t *request, size_t *length)
+enum http_error_t request_read(struct request_t *request, char **buffer, size_t *length)
 {
     size_t offset = 0;
 
-    char *buffer = malloc(sizeof(char) * PAGE_SIZE);
-    size_t bytes_read = recv(request->client, buffer, PAGE_SIZE, 0);
+    *buffer = malloc(sizeof(char) * PAGE_SIZE);
+    size_t bytes_read = recv(request->client, *buffer, PAGE_SIZE, 0);
 
     while (bytes_read >= PAGE_SIZE) {
         offset += bytes_read;
-        buffer = realloc(buffer, sizeof(char) * (offset + PAGE_SIZE));
-        bytes_read = recv(request->client, &buffer[offset], PAGE_SIZE, MSG_DONTWAIT);
+
+        if (offset + PAGE_SIZE > MAX_REQUEST_SIZE)
+            return HTTP_ERROR_REQUEST_TOO_LONG;
+
+        *buffer = realloc(*buffer, sizeof(char) * (offset + PAGE_SIZE));
+        bytes_read = recv(request->client, *buffer + offset, PAGE_SIZE, MSG_DONTWAIT);
     }
 
     *length = offset + bytes_read;
-    buffer[*length] = (char) 0;
+    *(*buffer + *length) = (char) 0;
 
-    return buffer;
-}
-
-/*!
- * \fn void request_free(char *)
- * \brief Frees resources needed for reading the request into memory.
- * \param request The target request to be freed.
- */
-void request_free(char *request)
-{
-    if (request != NULL) {
-        free(request);
-    }
+    return HTTP_ERROR_OK;
 }
