@@ -6,7 +6,21 @@
 #ifndef MU_HTTP_REQUEST_H
 #define MU_HTTP_REQUEST_H
 
+/*!
+ * \type socket_id
+ * \brief The socket's identification type.
+ */
 typedef int socket_id;
+
+/*!
+ * \struct request_t
+ * \brief Groups together all information about an incoming request.
+ */
+struct request_t {
+    socket_id client;
+    sockaddr_in remoteaddr;
+    pthread_t thread;
+};
 
 extern void request_listen(socket_id, int);
 

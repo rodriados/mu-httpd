@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -16,25 +17,15 @@
 
 #define PAGE_SIZE 4096
 
-/*!
- * \struct request_t
- * \brief Groups together all information about an incoming request.
- */
-typedef struct {
-    socket_id client;
-    sockaddr_in remoteaddr;
-    pthread_t thread;
-} request_t;
-
+void request_process(void *);
+char *request_read(struct request_t *);
+void request_free(char *);
 
 /*!
  * \var keep_running
  * \brief Informs whether the server should keep running and listening to new requests.
  */
 static volatile int keep_running = 1;
-
-void request_process(void *);
-char *request_read(request_t *);
 
 /*!
  * \fn void server_interrupt(int)
@@ -47,20 +38,20 @@ void server_interrupt(int _)
 }
 
 /*!
- * \fn void request_listen(socket_id, int)
+ * \fn void request_listen(socket_id, size_t)
  * \brief Listens to the socket and processes requests.
  * \param server The server's socket id.
  * \param max_threads The maximum number of threads to be spawned.
  */
-void request_listen(socket_id server, int max_threads)
+void request_listen(socket_id server, size_t max_threads)
 {
-    int current_id = 0;
-    request_t *request_list = calloc(max_threads, sizeof(request_t));
+    size_t current_id = 0;
+    struct request_t *request_list = calloc(max_threads, sizeof(struct request_t));
 
     signal(SIGINT, server_interrupt);
 
     while(keep_running) {
-        request_t *request = &request_list[current_id];
+        struct request_t *request = &request_list[current_id];
 
         if (request->thread)
             pthread_join(request->thread, NULL);
@@ -82,33 +73,49 @@ void request_listen(socket_id server, int max_threads)
  */
 void request_process(void *request)
 {
-    int request_size;
-    char *request_buffer = request_read((request_t *) request, &request_size);
-    http_request_t http_request = http_request_parse(request_buffer, request_size);
+    size_t length;
+    enum http_error_t error;
 
-    free(request_buffer);
+    char *request_buffer = request_read((struct request_t *) request, &length);
+    struct http_request_t http_request = http_request_parse(&error, request_buffer, length);
+
+    http_request_free(&http_request);
 }
 
 /*!
- * \fn char *request_read(request_t *, int *)
+ * \fn char *request_read(struct request_t *, size_t *)
  * \brief Reads the request into memory.
  * \param request The request to be read into memory.
- * \param size The total request size.
+ * \param length The total request length.
  * \return The request's buffer.
  */
-char *request_read(request_t *request, int *size)
+char *request_read(struct request_t *request, size_t *length)
 {
-    int offset = 0;
+    size_t offset = 0;
 
     char *buffer = malloc(sizeof(char) * PAGE_SIZE);
-    int bytes_read = recv(request->client, buffer, PAGE_SIZE, 0);
+    size_t bytes_read = recv(request->client, buffer, PAGE_SIZE, 0);
 
-    while (bytes_read == PAGE_SIZE) {
+    while (bytes_read >= PAGE_SIZE) {
         offset += bytes_read;
         buffer = realloc(buffer, sizeof(char) * (offset + PAGE_SIZE));
         bytes_read = recv(request->client, &buffer[offset], PAGE_SIZE, MSG_DONTWAIT);
     }
 
-    *size = offset + bytes_read;
+    *length = offset + bytes_read;
+    buffer[*length] = (char) 0;
+
     return buffer;
+}
+
+/*!
+ * \fn void request_free(char *)
+ * \brief Frees resources needed for reading the request into memory.
+ * \param request The target request to be freed.
+ */
+void request_free(char *request)
+{
+    if (request != NULL) {
+        free(request);
+    }
 }
