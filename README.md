@@ -1,7 +1,6 @@
 # μHTTPd Webserver
 ![license MIT](https://img.shields.io/badge/license-MIT-lightgrey.svg)
-![version 1.0](https://img.shields.io/badge/version-1.0-green.svg)
-![state abandoned](https://img.shields.io/badge/state-abandoned-red.svg)
+![version 2.0](https://img.shields.io/badge/version-2.0-green.svg)
 
 A very very simple and very very small HTTP server.
 
