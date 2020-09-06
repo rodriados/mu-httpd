@@ -18,6 +18,7 @@
 
 void *request_process(void *);
 enum http_error_t request_read(struct request_t *, char **, size_t *);
+void request_write_response(struct request_t *, struct response_t *);
 
 /*!
  * \fn void request_listen(socket_id, size_t)
@@ -50,21 +51,28 @@ void request_listen(socket_id server, size_t max_threads)
 /*!
  * \fn void request_process(void *)
  * \brief Processes a request and returns a response to client.
- * \param request The request to be processed.
+ * \param raw_request The request to be processed.
  */
-void *request_process(void *request)
+void *request_process(void *raw_request)
 {
     size_t length;
     char *request_buffer;
     enum http_error_t error = HTTP_ERROR_OK;
 
-    error = request_read((struct request_t *) request, &request_buffer, &length);
+    struct response_t response;
+    struct request_t *request = (struct request_t *) raw_request;
+
+    error = request_read(request, &request_buffer, &length);
     struct http_request_t http_request = http_request_parse(&error, request_buffer, length);
 
-    if (error == HTTP_ERROR_OK) response_process((struct request_t *) request, &http_request);
-    else                        response_send_error((struct request_t *) request, error);
+    if (error == HTTP_ERROR_OK) response = response_process(&http_request);
+    else                        response = response_make_error(error);
+
+    request_write_response(request, response);
 
     http_request_free(&http_request);
+    response_free(&response);
+
     return NULL;
 }
 
