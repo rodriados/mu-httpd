@@ -16,7 +16,6 @@ size_t http_request_parse_method(enum http_error_t *, struct http_request_t *, c
 size_t http_request_parse_uri(enum http_error_t *, struct http_request_t *, char *);
 size_t http_request_parse_protocol(enum http_error_t *, struct http_request_t *, char *);
 size_t http_request_parse_headers(enum http_error_t *, struct http_request_t *, char *);
-size_t http_request_parse_contents(enum http_error_t *, struct http_request_t *, char *, size_t);
 
 /*!
  * \fn struct http_request_t http_request_parse(enum http_error_t *, char *, size_t)
@@ -37,7 +36,7 @@ struct http_request_t http_request_parse(enum http_error_t *error, char *raw, si
     consumed += http_request_parse_method(error, &http_request, raw);
     consumed += http_request_parse_uri(error, &http_request, raw + consumed);
     consumed += http_request_parse_protocol(error, &http_request, raw + consumed);
-    //consumed += http_request_parse_headers(error, &http_request, raw + consumed);
+    consumed += http_request_parse_headers(error, &http_request, raw + consumed);
 
     http_request.contents = raw + consumed;
     http_request.length = size - consumed;
@@ -45,8 +44,9 @@ struct http_request_t http_request_parse(enum http_error_t *error, char *raw, si
     return http_request;
 }
 
+size_t http_request_parse_headers_count(char *);
 enum http_method_t http_request_parse_map_method(const char *);
-
+size_t http_request_parse_headers_one(struct http_header_t *, char *);
 size_t http_request_parse_uri_path(enum http_error_t *, char **, char *);
 size_t http_request_parse_uri_query(enum http_error_t *, char **, char *);
 
@@ -213,10 +213,83 @@ size_t http_request_parse_protocol(enum http_error_t *error, struct http_request
         return 0;
 
     size_t total_size;
-    total_size = sscanf(raw, "%16s\r\n", request->protocol);
+    sscanf(raw, "%16s\r\n%zn", request->protocol, &total_size);
 
     if (strcmp(request->protocol, "HTTP/1.1") != 0)
         *error = HTTP_ERROR_PROTOCOL_INVALID;
+
+    return total_size;
+}
+
+/*!
+ * \fn size_t http_request_parse_headers(enum http_error_t *, struct http_request_t *, char *)
+ * \brief Parses all header sent on the HTTP request being parsed.
+ * \param error The error status return for the current parsing.
+ * \param request The HTTP request structure to output the parsing to.
+ * \param raw The raw request contents.
+ * \return The amount of bytes consumed.
+ */
+size_t http_request_parse_headers(enum http_error_t *error, struct http_request_t *request, char *raw)
+{
+    if (*error != HTTP_ERROR_OK)
+        return 0;
+
+    size_t consumed = 0;
+    size_t count = http_request_parse_headers_count(raw);
+
+    if (count == 0)
+        *error = HTTP_ERROR_HEADERS_EMPTY;
+
+    request->count_headers = count;
+
+    if (count > 0)
+        request->header = malloc(sizeof(struct http_header_t) * count);
+
+    for (size_t i = 0; i < count; ++i)
+        consumed += http_request_parse_headers_one(&request->header[i], raw + consumed);
+
+    return consumed + 2;
+}
+
+/*!
+ * \fn size_t http_request_parse_headers_count(char *)
+ * \brief Counts the total number of headers sent on HTTP request.
+ * \param raw The raw request contents.
+ * \return The amount of bytes consumed.
+ */
+size_t http_request_parse_headers_count(char *raw)
+{
+    size_t counter = 0;
+
+    char *previous = raw;
+    char *current  = strchr(previous, '\r');
+
+    while (current - previous > 5) {
+        previous = current;
+        current  = strchr(previous + 1, '\r');
+        ++counter;
+    }
+
+    return counter;
+}
+
+/*!
+ * \fn size_t http_request_parse_headers_one(struct http_header_t *, char *)
+ * \brief Parses a single header from the incoming HTTP request.
+ * \param header The output header structure.
+ * \param raw The raw request contents.
+ * \return The amount of bytes consumed.
+ */
+size_t http_request_parse_headers_one(struct http_header_t *header, char *raw)
+{
+    size_t end_key, end_value, total_size;
+    
+    sscanf(raw, "%*[^:]%zn: %*[^\r]%zn\r\n%zn", &end_key, &end_value, &total_size);
+
+    header->key   = raw;
+    header->value = raw + end_key + 2;
+
+    raw[end_key] = raw[end_value] = (char) 0;
 
     return total_size;
 }
@@ -228,7 +301,8 @@ size_t http_request_parse_protocol(enum http_error_t *error, struct http_request
  */
 void http_request_free(struct http_request_t *request)
 {
-    if (request->raw) {
+    if (request) {
+        free(request->header);
         free(request->raw);
     }
 }

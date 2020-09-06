@@ -8,6 +8,8 @@
 
 #define MAX_THREADS         50
 #define MAX_CONNECTIONS     50
+
+#define DEFAULT_ADDR        "127.0.0.1"
 #define DEFAULT_PORT        8080
 
 #define PAGE_SIZE           4096

@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     memset(&localaddr, 0, sizeof(struct sockaddr_in));
 
     localaddr.sin_family = AF_INET;
-    localaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    localaddr.sin_addr.s_addr = inet_addr(DEFAULT_ADDR);
     localaddr.sin_port = htons(argc > 1 ? atoi(argv[1]) : DEFAULT_PORT);
 
     server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);

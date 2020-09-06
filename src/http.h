@@ -33,9 +33,14 @@ enum http_error_t {
   , HTTP_ERROR_URI_TOO_LONG
   , HTTP_ERROR_REQUEST_TOO_LONG
   , HTTP_ERROR_PROTOCOL_INVALID
+  , HTTP_ERROR_HEADERS_EMPTY
 };
 
-struct http_param_bag_t {
+/*!
+ * \struct http_header_t
+ * \brief Stores a HTTP header key-value pair.
+ */
+struct http_header_t {
     char *key;
     char *value;
 };
@@ -57,7 +62,8 @@ struct http_request_t {
     struct http_uri_t uri;
     enum http_method_t method;
     char protocol[16];
-    struct http_param_bag_t *header;
+    struct http_header_t *header;
+    size_t count_headers;
     char *contents;
     size_t length;
     char *raw;

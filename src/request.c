@@ -61,6 +61,9 @@ void *request_process(void *request)
     error = request_read((struct request_t *) request, &request_buffer, &length);
     struct http_request_t http_request = http_request_parse(&error, request_buffer, length);
 
+    if (error == HTTP_ERROR_OK) response_process((struct request_t *) request, &http_request);
+    else                        response_send_error((struct request_t *) request, error);
+
     http_request_free(&http_request);
     return NULL;
 }
