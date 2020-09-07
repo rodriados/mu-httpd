@@ -18,5 +18,6 @@
 #define MAX_URL_SIZE        2048
 
 #define PUBLIC_FOLDER       "www"
+#define LOG_FILE            "log/requests.txt"
 
 #endif

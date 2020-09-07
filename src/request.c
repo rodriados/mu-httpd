@@ -18,6 +18,7 @@
 #include "request.h"
 #include "response.h"
 #include "http.h"
+#include "log.h"
 
 void *request_process(void *);
 enum http_error_t request_read(struct request_t *, char **, size_t *);
@@ -71,6 +72,7 @@ void *request_process(void *raw_request)
     if (error == HTTP_ERROR_OK) response = response_process(&http_request);
     else                        response = response_make_error(error);
 
+    log_write(&request->remoteaddr, &http_request, &response);
     request_write_response(request, &response);
 
     http_request_free(&http_request);

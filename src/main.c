@@ -24,6 +24,7 @@
 #include "config.h"
 #include "colors.h"
 #include "request.h"
+#include "log.h"
 
 /*!
  * \var server
@@ -67,7 +68,11 @@ int main(int argc, char **argv)
     printf(BACKGREEN " LISTENING " RESETALL " @ %s:%d\n", address, port);
 
     signal(SIGINT, abort_listening);
+
+    log_init(LOG_FILE);
     request_listen(server, MAX_THREADS);
+    
+    log_finalize();
     close(server);
 
     printf(RESETALL);
@@ -81,6 +86,7 @@ int main(int argc, char **argv)
  */
 void abort_listening(int _)
 {
+    log_finalize();
     close(server);
     exit(0);
 }
