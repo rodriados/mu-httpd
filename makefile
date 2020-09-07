@@ -1,24 +1,34 @@
-LDIR=src
-SDIR=src
-ODIR=obj
-NAME=mu-http
+NAME = mu-httpd
 
-CFILES:=$(shell find $(SDIR) -name '*.cpp')
-DEPS=$(CFILES:src/%.cpp=obj/%.o)
+IDIR = src
+SDIR = src
+ODIR = obj
 
-CC=g++
-LIBS=-pthread
-CFLAGS=-Wall -pedantic -I$(LDIR) $(LIBS) -std=c++11
+GCC  ?= gcc
+STDC ?= c11
+LIBS ?= -lm -pthread
 
-all: $(NAME)
+CFLAGS = -std=$(STDC) -I$(IDIR) -Wall $(LIBS)
 
-$(NAME): $(DEPS) $(NAME).cpp
-	$(CC) $^ -o $@ $(CFLAGS)
+CFILES := $(shell find $(SDIR) -name '*.c')
+DEPS    = $(CFILES:src/%.c=obj/%.o)
 
-$(ODIR)/%.o: src/%.cpp $(CFILES)
-	$(CC) -c $< -o $@ $(CFLAGS)
+all: install $(NAME)
 
-.phony: clean
+install:
+	@mkdir -p $(ODIR)
 
 clean:
-	rm -rf $(ODIR)/*.o $(ODIR)/*~ $(SDIR)/*~ *~ $(NAME)
+	@rm -rf $(ODIR)/*.o $(ODIR)/*~ $(SDIR)/*~ *~ $(NAME)
+
+ifneq ($(wildcard $(ODIR)/.),)
+-include $(shell find $(ODIR) -name '*.d')
+endif
+
+$(NAME): $(DEPS)
+	$(GCC) $(CFLAGS) $^ -o $@
+
+$(ODIR)/%.o: $(SDIR)/%.c
+	$(GCC) $(CFLAGS) -MMD -c $< -o $@
+
+.PHONY: all install clean
