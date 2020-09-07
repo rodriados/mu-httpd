@@ -69,6 +69,33 @@ struct http_request_t {
     char *raw;
 };
 
+/*!
+ * \enum http_code_t
+ * \brief Enumerates HTTP response codes.
+ */
+enum http_code_t {
+    HTTP_RESPONSE_OK                    = 200
+  , HTTP_RESPONSE_MOVED_PERMANENTLY     = 301
+  , HTTP_RESPONSE_BAD_REQUEST           = 400
+  , HTTP_RESPONSE_NOT_FOUND             = 404
+  , HTTP_RESPONSE_INTERNAL_SERVER_ERROR = 500
+  , HTTP_RESPONSE_NOT_IMPLEMENTED       = 501
+  , HTTP_RESPONSE_VERSION_NOT_SUPPORTED = 505
+};
+
+/*!
+ * \struct http_response_t
+ * \brief Describes a HTTP response for an incoming request.
+ */
+struct http_response_t {
+    char protocol[16];
+    enum http_code_t status_code;
+    struct http_header_t *header;
+    size_t count_headers;
+    unsigned char *content;
+    size_t length;
+};
+
 extern struct http_request_t http_request_parse(enum http_error_t *, char *, size_t);
 extern void http_request_free(struct http_request_t *);
 

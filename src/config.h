@@ -13,7 +13,10 @@
 #define DEFAULT_PORT        8080
 
 #define PAGE_SIZE           4096
+#define BUFFER_SIZE         2048
 #define MAX_REQUEST_SIZE    52428800
 #define MAX_URL_SIZE        2048
+
+#define PUBLIC_FOLDER       "www"
 
 #endif
