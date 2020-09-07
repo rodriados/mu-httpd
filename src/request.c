@@ -11,14 +11,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "config.h"
 #include "request.h"
+#include "response.h"
 #include "http.h"
 
 void *request_process(void *);
 enum http_error_t request_read(struct request_t *, char **, size_t *);
-void request_write_response(struct request_t *, struct response_t *);
+void request_write_response(struct request_t *, struct http_response_t *);
 
 /*!
  * \fn void request_listen(socket_id, size_t)
@@ -59,7 +62,7 @@ void *request_process(void *raw_request)
     char *request_buffer;
     enum http_error_t error = HTTP_ERROR_OK;
 
-    struct response_t response;
+    struct http_response_t response;
     struct request_t *request = (struct request_t *) raw_request;
 
     error = request_read(request, &request_buffer, &length);
@@ -68,10 +71,13 @@ void *request_process(void *raw_request)
     if (error == HTTP_ERROR_OK) response = response_process(&http_request);
     else                        response = response_make_error(error);
 
-    request_write_response(request, response);
+    request_write_response(request, &response);
 
     http_request_free(&http_request);
     response_free(&response);
+
+    close(request->client);
+    request->client = 0;
 
     return NULL;
 }
@@ -105,4 +111,27 @@ enum http_error_t request_read(struct request_t *request, char **buffer, size_t 
     *(*buffer + *length) = (char) 0;
 
     return HTTP_ERROR_OK;
+}
+
+/*!
+ * \fn void request_write_response(struct request_t *, struct http_response_t *)
+ * \brief Sends a response back to the request client.
+ * \param request The request to be responded.
+ * \param response The request's response.
+ */
+void request_write_response(struct request_t *request, struct http_response_t *response)
+{
+    char buffer[2048];
+    const char *status_str = response_status_string(response->status_code);
+
+    sprintf(buffer, "%s %d %s\r\n", response->protocol, response->status_code, status_str);
+    send(request->client, buffer, strlen(buffer), MSG_MORE);
+
+    for (size_t i = 0; i < response->count_headers; ++i) {
+        sprintf(buffer, "%s: %s\r\n", response->header[i].key, response->header[i].value);
+        send(request->client, buffer, strlen(buffer), MSG_MORE);
+    }
+
+    send(request->client, "\r\n", 2, MSG_MORE);
+    send(request->client, response->content, response->length, 0);
 }

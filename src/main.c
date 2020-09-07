@@ -57,17 +57,16 @@ int main(int argc, char **argv)
     char *address = inet_ntoa(localaddr.sin_addr);
     int port = ntohs(localaddr.sin_port);
 
-    printf(BRIGHT "μHTTP Hipertext Transfer Protocol Server\n\n" RESETALL);
+    printf(BRIGHT "μHTTPd Hipertext Transfer Protocol Server\n" RESETALL);
 
     if (errno) {
         printf(BACKRED " ERROR " RESETALL " Could not create socket! Bailing out.\n");
         return 1;
     }
 
+    printf(BACKGREEN " LISTENING " RESETALL " @ %s:%d\n", address, port);
+
     signal(SIGINT, abort_listening);
-
-    printf(BACKGREEN " LISTENING " RESETALL " @ %s:%d\n\n", address, port);
-
     request_listen(server, MAX_THREADS);
     close(server);
 
