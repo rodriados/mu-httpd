@@ -212,6 +212,7 @@ void response_make_directory_listing(struct http_response_t *response, const cha
         length += size;
     }
 
+    closedir(dir);
     response_append_contents(response, buffer, length);
     free(buffer);
 }

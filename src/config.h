@@ -6,7 +6,7 @@
 #ifndef MU_HTTPD_CONFIG_H
 #define MU_HTTPD_CONFIG_H
 
-#define MAX_THREADS         50
+#define MAX_THREADS         5
 #define MAX_CONNECTIONS     50
 
 #define DEFAULT_ADDR        "127.0.0.1"

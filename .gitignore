@@ -6,3 +6,5 @@ mu-httpd
 *~
 *.sublime-workspace
 .idea
+.vscode
+draft.c

@@ -1,34 +1,53 @@
+# mu-HTTPd: A very very simple HTTP server.
+# @file Makefile for compiling, installing and automatically testing.
+# @author Rodrigo Siqueira <rodriados@gmail.com>
+# @copyright 2014-present Rodrigo Siqueira
 NAME = mu-httpd
 
-IDIR = src
-SDIR = src
-ODIR = obj
+INCDIR = src
+SRCDIR = src
+OBJDIR = obj
+BINDIR = bin
 
-GCC  ?= gcc
+CC   ?= gcc
 STDC ?= c11
+
 LIBS ?= -lm -pthread
 
-CFLAGS = -std=$(STDC) -I$(IDIR) -Wall $(LIBS)
+# Defining macros inside code at compile time. This can be used to enable or disable
+# certain features on code or affect the projects compilation.
+FLAGS   ?= -Wall
+CCFLAGS ?= -std=$(STDC) -I$(INCDIR) $(FLAGS) $(LIBS)
 
-CFILES := $(shell find $(SDIR) -name '*.c')
-DEPS    = $(CFILES:src/%.c=obj/%.o)
+SRCFILES := $(shell find $(SRCDIR) -name '*.c')
+OBJFILES = $(SRCFILES:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
-all: install $(NAME)
+all: build
 
-install:
-	@mkdir -p $(ODIR)
+debug: override CFLAGS := -ggdb $(CFLAGS)
+debug: build
+
+build: prepare-build $(BINDIR)/$(NAME)
+
+prepare-build:
+	@mkdir -p $(OBJDIR)
+	@mkdir -p $(BINDIR)
 
 clean:
-	@rm -rf $(ODIR)/*.o $(ODIR)/*~ $(SDIR)/*~ *~ $(NAME)
+	@rm -rf $(OBJDIR)
+	@rm -fr $(BINDIR)
 
-ifneq ($(wildcard $(ODIR)/.),)
--include $(shell find $(ODIR) -name '*.d')
+.PHONY: all clean debug build
+.PHONY: prepare-build
+
+# Creates dependency on header files. This is valuable so that whenever a header
+# file is changed, all objects depending on it will be forced to recompile.
+ifneq ($(wildcard $(OBJDIR)/.),)
+-include $(shell find $(OBJDIR) -name '*.d')
 endif
 
-$(NAME): $(DEPS)
-	$(GCC) $(CFLAGS) $^ -o $@
+$(BINDIR)/$(NAME): $(OBJFILES)
+	$(CC) $(CCFLAGS) $^ -o $@
 
-$(ODIR)/%.o: $(SDIR)/%.c
-	$(GCC) $(CFLAGS) -MMD -c $< -o $@
-
-.PHONY: all install clean
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(CCFLAGS) -MMD -c $< -o $@
