@@ -1,34 +1,31 @@
 /*!
- * \brief The request processing functions.
- * Exposes functions which are relevant for the processing of incoming requests.
+ * mu-HTTPd: A very very simple HTTP server.
+ * \file The types and functions declarations for a user request.
  * \author Rodrigo Siqueira <rodriados@gmail.com>
+ * \copyright 2014-present Rodrigo Siqueira
  */
 #ifndef MU_HTTPD_REQUEST_H
 #define MU_HTTPD_REQUEST_H
 
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <stdint.h>
 
-/*!
- * \type socket_id
- * \brief The socket's identification type.
- */
-typedef int socket_id;
+#include "server.h"
+#include "logger.h"
 
 /*!
  * \struct request_t
- * \brief Groups together all information about an incoming request.
+ * \brief The type for an accepted user request.
+ * \since 2.0
  */
-struct request_t {
-    socket_id client;
-    struct sockaddr_in remoteaddr;
-    pthread_t thread;
-};
+typedef struct request_t {
+    socket_id_t client;
+    struct sockaddr_in origin;
+} request_t;
 
-extern void request_listen(socket_id, size_t);
+/*
+ * Forward declaration of request processing function.
+ * This function is responsible for truly processing a request.
+ */
+extern void request_process(request_t *, logger_writer_t*);
 
 #endif

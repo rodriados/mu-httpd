@@ -1,21 +1,17 @@
 /*!
- * \brief The server's entry point.
+ * mu-HTTPd: A very very simple HTTP server.
+ * \file The server's entry point implementation.
  * This is the file in which one can find the software's main function. Here, the
  * server is initialized and some basic checks are made.
  *
- * This paper's objective was the implementation of a webserver's basic functionalities.
- * The webserver must allow HTTP clients (using browsers such Firefox, Chrome or
- * IE) to connect to the server and download files from it. The webserver also had
- * to implement the methods GET and POST as part of the HTTP protocol, using the
- * TCP/IP protocols to transfer HTML pages or files.
- *
+ * This paper's objective was the implementation of a web-server's basic functionalities.
+ * The web-server must allow HTTP clients, using browsers such Firefox or Chrome,
+ * to connect to the server and download files from it. The web-server also had to
+ * implement the methods GET and POST as part of the HTTP protocol, using the TCP/IP
+ * protocols to transfer HTML pages or files.
  * \author Rodrigo Siqueira <rodriados@gmail.com>
+ * \copyright 2014-present Rodrigo Siqueira
  */
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -23,16 +19,11 @@
 
 #include "config.h"
 #include "colors.h"
-#include "request.h"
-#include "log.h"
+#include "logger.h"
+#include "server.h"
 
-/*!
- * \var server
- * \brief This is the descriptor of the socket used by the server.
- */
-socket_id server;
-
-void abort_listening(int);
+void report_success(const char *, uint16_t);
+void report_failure_and_exit(enum server_status_t);
 
 /*!
  * \fn int main(int, char **)
@@ -42,51 +33,59 @@ void abort_listening(int);
  */
 int main(int argc, char **argv)
 {
-    struct sockaddr_in localaddr;
+    printf(FG_INFO("μHTTPd Hipertext Transfer Protocol Server\n"));
 
-    memset(&localaddr, 0, sizeof(struct sockaddr_in));
+    server_t server = {
+        .address = DEFAULT_ADDR
+      , .port = argc > 1 ? atoi(argv[1]) : DEFAULT_PORT
+    };
 
-    localaddr.sin_family = AF_INET;
-    localaddr.sin_addr.s_addr = inet_addr(DEFAULT_ADDR);
-    localaddr.sin_port = htons(argc > 1 ? atoi(argv[1]) : DEFAULT_PORT);
+    server_status_t server_status =
+        server_create(&server, MAX_CONNECTIONS);
 
-    server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (server_status != SERVER_SUCCESS)
+        report_failure_and_exit(server_status);
 
-    bind(server, (struct sockaddr *)&localaddr, sizeof(struct sockaddr_in));
-    listen(server, MAX_CONNECTIONS);
+    FILE *logfile = fopen(LOG_FILE, "a");
+    logger_t logger = logger_initialize();
 
-    char *address = inet_ntoa(localaddr.sin_addr);
-    int port = ntohs(localaddr.sin_port);
+    logger_file_sink_add(&logger, logfile);
+    logger_file_sink_add(&logger, stdout);
 
-    printf(BRIGHT "μHTTPd Hipertext Transfer Protocol Server\n" RESETALL);
+    report_success(server.address, server.port);
 
-    if (errno) {
-        printf(BACKRED " ERROR " RESETALL " Could not create socket! Bailing out.\n");
-        return 1;
-    }
+    server_status = server_listen(&server, &logger, MAX_THREADS);
 
-    printf(BACKGREEN " LISTENING " RESETALL " @ %s:%d\n", address, port);
-
-    signal(SIGINT, abort_listening);
-
-    log_init(LOG_FILE);
-    request_listen(server, MAX_THREADS);
-    
-    log_finalize();
-    close(server);
+    server_destroy(&server);
+    logger_finalize(&logger);
+    fclose(logfile);
 
     printf(RESETALL);
 
     return 0;
 }
 
+#define HTTPD_SUCCESS_MSG BG_SUCCESS(" LISTENING ") FG_INFO(" at %s:%hu\n")
+#define HTTPD_FAILURE_MSG BG_WARNING(" ERROR ") " %s\n"
+
 /*!
- * \fn void abort_listening(int)
- * \brief Handles termination signal and closes the server.
+ * \fn void report_success(const char*, uint16_t)
+ * \brief Reports a successful server connection message to the terminal.
+ * \param address The address to which the server is listening to.
+ * \param port The port at which the server is listening to.
  */
-void abort_listening(int _)
+void report_success(const char *address, uint16_t port)
 {
-    log_finalize();
-    close(server);
-    exit(0);
+    fprintf(stderr, HTTPD_SUCCESS_MSG, address, port);
+}
+
+/*!
+ * \fn void report_failure_and_exit(server_status_t)
+ * \brief Reports a failure server connection to the terminal.
+ * \param status The server status to be reported.
+ */
+void report_failure_and_exit(server_status_t status)
+{
+    fprintf(stderr, HTTPD_FAILURE_MSG, server_status_describe(status));
+    exit(EXIT_FAILURE);
 }

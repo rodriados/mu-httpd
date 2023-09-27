@@ -1,8 +1,8 @@
 /*!
- * \brief Processes requests in a multi-threaded environment.
- * Implements functions relevant to the processing of a request. Each request is
- * treated independently in its own thread.
+ * mu-HTTPd: A very very simple HTTP server.
+ * \file The core implementation for processing user requests.
  * \author Rodrigo Siqueira <rodriados@gmail.com>
+ * \copyright 2014-present Rodrigo Siqueira
  */
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -13,76 +13,14 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "config.h"
-#include "request.h"
 #include "response.h"
 #include "http.h"
-#include "log.h"
+#include "logger.h"
 
-void *request_process(void *);
-enum http_error_t request_read(struct request_t *, char **, size_t *);
-void request_write_response(struct request_t *, struct http_response_t *);
-
-/*!
- * \fn void request_listen(socket_id, size_t)
- * \brief Listens to the socket and processes requests.
- * \param server The server's socket id.
- * \param max_threads The maximum number of threads to be spawned.
- */
-void request_listen(socket_id server, size_t max_threads)
-{
-    size_t current_id = 0;
-    struct request_t *request_list = calloc(max_threads, sizeof(struct request_t));
-    socklen_t length = sizeof(struct sockaddr_in);
-
-    while(1) {
-        struct request_t *request = &request_list[current_id];
-
-        if (request->thread)
-            pthread_join(request->thread, NULL);
-
-        request->client = accept(server, (struct sockaddr *) &request->remoteaddr, &length);
-        pthread_create(&request->thread, NULL, request_process, (void *) request);
-
-        current_id = (current_id + 1) % max_threads;
-    }
-
-    pthread_exit(NULL);
-    free(request_list);
-}
-
-/*!
- * \fn void request_process(void *)
- * \brief Processes a request and returns a response to client.
- * \param raw_request The request to be processed.
- */
-void *request_process(void *raw_request)
-{
-    size_t length;
-    char *request_buffer;
-    enum http_error_t error = HTTP_ERROR_OK;
-
-    struct http_response_t response;
-    struct request_t *request = (struct request_t *) raw_request;
-
-    error = request_read(request, &request_buffer, &length);
-    struct http_request_t http_request = http_request_parse(&error, request_buffer, length);
-
-    if (error == HTTP_ERROR_OK) response = response_process(&http_request);
-    else                        response = response_make_error(error);
-
-    log_write(&request->remoteaddr, &http_request, &response);
-    request_write_response(request, &response);
-
-    http_request_free(&http_request);
-    response_free(&response);
-
-    close(request->client);
-    request->client = 0;
-
-    return NULL;
-}
+#include "request.h"
 
 /*!
  * \fn enum http_error_t request_read(struct request_t *, char **, size_t *)
@@ -136,4 +74,38 @@ void request_write_response(struct request_t *request, struct http_response_t *r
 
     send(request->client, "\r\n", 2, MSG_MORE);
     send(request->client, response->content, response->length, 0);
+}
+
+/*!
+ * \fn void request_process(request_t*, logger_writer_t*)
+ * \brief Processes a request and sends a response to user.
+ * \param request The request to be processed.
+ * \param logger_writer The logger writer instance to log to.
+ */
+extern void request_process(request_t *request, logger_writer_t *logger_writer)
+{
+    size_t length;
+    char *request_buffer;
+    time_t t = time(NULL);
+
+    enum http_error_t error = request_read(request, &request_buffer, &length);
+    struct http_request_t http_request = http_request_parse(&error, request_buffer, length);
+
+    struct http_response_t http_response = error == HTTP_ERROR_OK
+        ? response_process(&http_request)
+        : response_make_error(error);
+
+    logger_entry_t log_entry = {
+        .level = LOGGER_LEVEL_INFO
+      , .datetime = *localtime(&t)
+      , .http_method = http_request.method
+      , .http_code = http_response.status_code
+      , .http_uri = http_request.uri
+    };
+
+    request_write_response(request, &http_response);
+    logger_write(logger_writer, &log_entry);
+
+    http_request_free(&http_request);
+    response_free(&http_response);
 }
